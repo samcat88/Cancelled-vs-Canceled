@@ -1,0 +1,315 @@
+trigger AyAccountingTransactions on OpportunityLineItem(after insert,after update) {
+
+    Ay_Trigger_Switch__c  AsTriggerSwitch= Ay_Trigger_Switch__c.getInstance();
+    AsTriggerSwitch = AsTriggerSwitch!= null ? AsTriggerSwitch : new Ay_Trigger_Switch__c();
+    if (AsTriggerSwitch.DisableASTriggers__c == true) {
+    
+        return;
+    }
+
+    String Type ; 
+    String TransCode; 
+     AyAccountingHandler  accountHandlesClass = new AyAccountingHandler(); 
+   
+       // Checking to see if Trigger needs to invoke the Accounting Transactions 
+      
+       if ( Trigger.isUpdate ){
+        for (OpportunityLineItem OptyLines : Trigger.new) {
+        
+          if (( OptyLines.AY_Ignore_for_Journal_Entries__c == False ) && (OptyLines.TotalPrice > 0)){
+
+              OpportunityLineItem oldItems = Trigger.oldMap.get(OptyLines.ID);
+              
+              if ((OptyLines.AY_Item_Status__c != oldItems.AY_Item_Status__c &&  OptyLines.AY_Item_Status__c == 'Active' )  
+                || (OptyLines.AY_Item_Status__c != oldItems.AY_Item_Status__c &&  OptyLines.AY_Item_Status__c == 'Cancelled') 
+                || (OptyLines.AY_Item_Status__c != oldItems.AY_Item_Status__c &&  OptyLines.AY_Item_Status__c == 'Waitlisted')
+                || (OptyLines.AY_Item_Status__c != oldItems.AY_Item_Status__c &&  OptyLines.AY_Item_Status__c == 'Short Paid')
+                || (OptyLines.AY_Payments__c != oldItems.AY_Payments__c && OptyLines.AY_Payments__c != 0 && OptyLines.AY_Payments__c != null && OptyLines.AY_Item_Status__c == 'Waitlisted')
+              ){ 
+             
+             // WaitListed to Active 
+             if ( oldItems.AY_Item_Status__c == 'Waitlisted' && OptyLines.AY_Item_Status__c == 'Active'){
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'WAITLISTEDREV', '');
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVE', '');
+                 
+                 if ( OptyLines.AY_Event_Start_Date__c > System.Today() ){
+                   // Create Row for the Defered account also.. 
+                     accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEF', '');
+                 }
+                 
+             //Added by ashutosh on 10-Aug-2016    
+             }else if (oldItems.AY_Item_Status__c == 'Waitlisted' && OptyLines.AY_Item_Status__c == 'Short Paid'){ // WaitListed --> Short Paid
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'WAITLISTEDREV', '');    
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'SHORT PAID', '');                           
+                                  
+             }else if (oldItems.AY_Item_Status__c == 'Short Paid' && OptyLines.AY_Item_Status__c == 'Waitlisted'){ // Short Paid --> Waitlisted
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'WAITLISTED', '');    
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'SHORT PAIDREV', '');                    
+             
+             }else if (oldItems.AY_Item_Status__c == 'Short Paid' && OptyLines.AY_Item_Status__c == 'Active'){ // Short Paid --> Active
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVE', '');  
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'SHORT PAIDREV', ''); 
+                 if(OptyLines.AY_Event_Start_Date__c > System.Today()){
+                     accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEF', '');    
+                 }
+                 
+             
+             }else if (oldItems.AY_Item_Status__c == 'Active' && OptyLines.AY_Item_Status__c == 'Short Paid'){ // Active --> Short Paid
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'CANCEL', ''); 
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'SHORT PAID', '');
+                 if(OptyLines.AY_Event_Start_Date__c > System.Today()){
+                     accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEFREV', '');    
+                 } 
+                 if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c < System.Today()){
+                     accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');                      
+                 }
+                
+             
+              }else if (oldItems.AY_Item_Status__c == 'Short Paid' && OptyLines.AY_Item_Status__c == 'Cancelled'){ // Short Paid --> Cancelled   
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'SHORT PAIDREV', ''); 
+             //Ashutosh end here.    
+                     
+             }else if (oldItems.AY_Item_Status__c == 'Waitlisted' && OptyLines.AY_Item_Status__c == 'Cancelled'){ // WaitListed --> Cancelled
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'WAITLISTEDREV', '');
+                 
+             } else if (oldItems.AY_Item_Status__c == 'Active' && OptyLines.AY_Item_Status__c == 'Waitlisted'){ // Active --> WaitListed
+                  accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'CANCEL', '');
+                  accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'WAITLISTED','');
+                  if ( OptyLines.AY_Event_Start_Date__c > System.Today() ){
+                      accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEFREV','');
+                  }else if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c < System.Today()){
+                      accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');                      
+                  }
+                 
+             }
+             else if (oldItems.AY_Item_Status__c == 'Cancelled' && OptyLines.AY_Item_Status__c == 'Waitlisted'){ // Cancelled --> WaitListed
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'WAITLISTED', '');
+                 
+             }
+             
+             else if (oldItems.AY_Item_Status__c == 'Cancelled' && OptyLines.AY_Item_Status__c == 'Active'){ // Cancelled --> Active 
+                 accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVE', '');
+                 if(OptyLines.AY_Event_Start_Date__c > System.Today()){
+                     accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEF', '');
+                 }
+             }
+             
+             else if (oldItems.AY_Item_Status__c == 'Active' && OptyLines.AY_Item_Status__c == 'Cancelled'){ // Active --> Cancelled
+                /*
+                if ( OptyLines.NS_Discount_Amount__c > 0 ){
+                    system.debug('discount');
+                    // Create Row for the Discount. 
+                    accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');
+                } */
+                if ( OptyLines.AY_Event_Start_Date__c > System.Today() ){
+                    // Create Row for the Deferred account also.. 
+                    accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEFREV', '');
+                    accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'CANCEL', '');
+                }Else{ // Added by prateek
+                    if(optyLines.AY_Item_Family__c == 'Event'){
+                        accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'CANCEL', '');
+                        if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c < System.Today()){
+                            accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');                      
+                        }
+                    }else{
+                        accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'CANCELLED', '');
+                    }
+                    
+                    //if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c < System.Today()){
+                       // accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');                      
+                    //}
+                    
+                    /*
+                        //Code commented by Ashutosh on 19/7/2016 because it creates REFUND JE along with Cancelled one
+                        //which is wrong. When the status is turned CANCELLED there should only a cancelled JE not a refund one.                    
+                    
+                    If(OptyLines.AY_Transaction_3__c <> null){
+                        accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_3__c, 'REFUND', '');
+                    }Else If(OptyLines.AY_Transaction_2__c <> null){
+                        accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_2__c, 'REFUND', '');
+                    }Else If(OptyLines.AY_Transaction_1__c <> null){
+                        accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_1__c, 'REFUND', '');
+                    }Else{
+                        accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'REFUND', '');
+                    }
+                    */
+                }
+                
+             }
+             else{
+             
+                //Create row for status
+                If(oldItems.AY_Item_Status__c == NULL && OptyLines.AY_Item_Status__c == 'Cancelled' ){
+                    accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'CANCEL', '');
+                    
+                    if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c < System.Today()){
+                        accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');                      
+                    }else if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c > System.Today()){
+                        accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCEL', '');                      
+                    }
+                } else{
+                    accountHandlesClass.createAy_AS_Staging(optyLines, NULL, OptyLines.AY_Item_Status__c.toUpperCase(), '');
+                }
+                //code added by ashutosh on 9th-AUG-2016 as the following commented line was the prior code.
+                //if ( OptyLines.AY_Event_Start_Date__c > System.Today() ){
+                   
+                   If(( OptyLines.AY_Event_Start_Date__c > System.Today()) && (oldItems.AY_Item_Status__c == NULL && OptyLines.AY_Item_Status__c == 'Active' )){
+                       accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEF', '');
+                   }
+                   //else if (( OptyLines.AY_Event_Start_Date__c > System.Today()) && (( OptyLines.AY_Item_Status__c != 'Waitlisted' ) || ( OptyLines.AY_Item_Status__c != 'Short Paid' ))){
+                   // Create Row for the Defered account also.. 
+                   //accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEFREV', '');                       
+               //}
+               
+               /*
+               if ( OptyLines.NS_Discount_Amount__c > 0 ){
+                     system.debug('discount');
+                   // Create Row for the Discount. 
+                     accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountACTIVE', '');
+               } */
+
+             }   
+               
+          }
+          
+          
+          If(oldItems.AY_Transaction_1__c <> OptyLines.AY_Transaction_1__c  && OptyLines.AY_Transaction_1__c <> NULL){
+              
+                  if( OptyLines.AY_TransCode__c == 'Refund' ){
+                      Transcode = 'REFUND';
+                  }else{
+                      Transcode = 'CASH';
+                  }
+                  accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_1__c, 'CASH', Transcode);       
+              
+          }
+   
+          If((oldItems.AY_Transaction_2__c <> OptyLines.AY_Transaction_2__c) 
+                  && (OptyLines.AY_Transaction_2__c <> null)
+                      && (OptyLines.AY_Transaction_2__c <> oldItems.AY_Transaction_1__c)){
+                      
+                  if( OptyLines.AY_Transcode2__c == 'Refund' ){
+                      Transcode = 'REFUND';
+                  }else{
+                      Transcode = 'CASH';
+                  }
+                  accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_2__c, 'CASH', Transcode);        
+         }
+              
+          If(oldItems.AY_Transaction_3__c <> OptyLines.AY_Transaction_3__c
+                  && OptyLines.AY_Transaction_3__c <> null
+                  && OptyLines.AY_Transaction_3__c <> oldItems.AY_Transaction_2__c
+                  && OptyLines.AY_Transaction_3__c <> oldItems.AY_Transaction_1__c){
+                      
+                  if( OptyLines.AY_Transcode3__c == 'Refund' ){
+                      Transcode = 'REFUND';
+                  }else{
+                      Transcode = 'CASH';
+                  }
+                  accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_3__c, 'CASH', Transcode);        
+          }
+              
+      /*      if(OptyLines.AY_Transaction_1__c != oldItems.AY_Transaction_1__c && OptyLines.AY_Transaction_1__c != NULL){
+            
+            
+          
+              if( OptyLines.AY_TransCode__c == 'Refund' ){
+                Transcode = 'REFUND';
+              }else{
+                 Transcode = 'CASH';
+              }
+              accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_1__c, 'CASH', Transcode);  
+          }*/
+          /*
+          if(OptyLines.AY_Transaction_2__c != oldItems.AY_Transaction_2__c && OptyLines.AY_Transaction_2__c != NULL){
+          
+             system.debug('------Vikram---' +OptyLines.AY_Transcode2__c);
+          
+              if( OptyLines.AY_Transcode2__c == 'Refund' ){
+                Transcode = 'REFUND';
+              }else{
+                 Transcode = 'CASH';
+              }
+                         
+               accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_2__c, 'CASH', Transcode); 
+          } 
+          
+              if( OptyLines.AY_Transcode3__c == 'Refund' ){
+                Transcode = 'REFUND';
+              }else{
+                 Transcode = 'CASH';
+              }
+                         
+            if((OptyLines.AY_Transaction_3__c != oldItems.AY_Transaction_3__c) && (OptyLines.AY_Transaction_3__c <> null)){
+                new AyAccountingHandler().createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_3__c, 'CASH', Transcode);   
+                                   
+          }  */
+            
+       }
+       
+       } 
+                     
+     }
+     
+     if ( Trigger.isInsert ){
+        for (OpportunityLineItem OptyLines : Trigger.new) {
+         if (( OptyLines.AY_Ignore_for_Journal_Entries__c == False )&& (OptyLines.TotalPrice > 0)){
+
+          if (OptyLines.AY_Item_Status__c == 'Active' ||  OptyLines.AY_Item_Status__c == 'Cancelled' || OptyLines.AY_Item_Status__c == 'Waitlisted') { 
+          
+            accountHandlesClass.createAy_AS_Staging(optyLines, NULL, OptyLines.AY_Item_Status__c.toUpperCase(), '');
+            if ( OptyLines.AY_Event_Start_Date__c > System.Today() ){
+                   // Create Row for the Defered account also.. 
+                   accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEF', '');
+            }
+               
+          }
+          
+         
+          
+          if(OptyLines.AY_Transaction_1__c <> null){
+          
+               if( OptyLines.AY_TransCode__c == 'Refund' ){
+                Transcode = 'REFUND';
+              }else{
+                 Transcode = 'CASH';
+              }
+              accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_1__c, 'CASH', Transcode);   
+                          
+           
+          }
+          if(OptyLines.AY_Transaction_2__c <> null){
+          
+              if( OptyLines.AY_Transcode2__c == 'Refund' ){
+                    Transcode = 'REFUND';
+                  }else{
+                     Transcode = 'CASH';
+                  }
+                         
+               accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_2__c, 'CASH', Transcode);   
+                          
+                            
+          } 
+          if(OptyLines.AY_Transaction_3__c <> null){
+                 if( OptyLines.AY_Transcode3__c == 'Refund' ){
+                    Transcode = 'REFUND';
+                  }else{
+                     Transcode = 'CASH';
+                  }
+                         
+                accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_3__c, 'CASH', Transcode);   
+                                   
+          } 
+        }
+        
+      }   
+       }
+  
+  
+  
+  // upsert the staging values 
+  accountHandlesClass.Set_AS_Staging();
+
+
+    
+}
