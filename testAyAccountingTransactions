@@ -289,7 +289,7 @@
             oppp.Quantity=1;
             oppp.OpportunityId=opp.id;
             oppp.PriceBookEntryId= customPriceBookEntry.id;
-            oppp.AY_Item_Status__c='Cancelled';
+            oppp.AY_Item_Status__c='Canceled';
             oppp.AY_Transaction_2__c=opp.id;
             oppp.AY_Transaction_1__c=opp2.id;
             oppp.AY_Transaction_3__c=op.id;
@@ -306,7 +306,7 @@
             oppls1.AY_Item_Status__c='Waitlisted';
             insert oppls1;
             
-            oppls1.AY_Item_Status__c='Cancelled';
+            oppls1.AY_Item_Status__c='Canceled';
             update  oppls1;
     
             oppls1.AY_Item_Status__c='Refund';
@@ -403,7 +403,7 @@
             oppp.Quantity=1;
             oppp.OpportunityId=opp.id;
             oppp.PriceBookEntryId= customPriceBookEntry.id;
-            oppp.AY_Item_Status__c='Cancelled';
+            oppp.AY_Item_Status__c='Canceled';
             oppp.AY_Transaction_2__c=opp.id;
             oppp.AY_Transaction_1__c=op2.id;
             oppp.AY_Transaction_3__c=op.id;
@@ -419,7 +419,7 @@
             oppls1.Quantity=1;
             oppls1.OpportunityId=opp.id;
             oppls1.PriceBookEntryId= customPriceBookEntry.id;
-            oppls1.AY_Item_Status__c='Cancelled';
+            oppls1.AY_Item_Status__c='Canceled';
             insert oppls1;
             oppls1.AY_Item_Status__c='Waitlisted';
             update  oppls1;
@@ -431,7 +431,7 @@
             oppls.PriceBookEntryId= customPriceBookEntry.id;
             oppls.AY_Item_Status__c='Waitlisted';
             insert oppls;
-            oppls.AY_Item_Status__c='Cancelled';
+            oppls.AY_Item_Status__c='Canceled';
             update oppls;
                      
        OpportunityLineItem opplW2S = new OpportunityLineItem();
@@ -450,22 +450,22 @@
             update opplW2S;
             opplW2S.AY_Item_Status__c='Short Paid';
             update opplW2S;
-            opplW2S.AY_Item_Status__c='Cancelled';
+            opplW2S.AY_Item_Status__c='Canceled';
             update opplW2S;
             opplW2S.AY_Item_Status__c= NULL;
             update opplW2S;
-            opplW2S.AY_Item_Status__c= 'Cancelled';
+            opplW2S.AY_Item_Status__c= 'Canceled';
             opplW2S.NS_Discount_Amount__c = 10;
             opplW2S.AY_Item_Start_Date__c = system.today() - 7;
             update opplW2S;
             opplW2S.AY_Item_Status__c= 'Active';
             update opplW2S;
-            opplW2S.AY_Item_Status__c= 'Cancelled';
+            opplW2S.AY_Item_Status__c= 'Canceled';
             opplW2S.AY_Item_Start_Date__c = system.today() + 7;
             update opplW2S;
             opplW2S.AY_Item_Status__c= NULL;
             update opplW2S;
-            opplW2S.AY_Item_Status__c= 'Cancelled';
+            opplW2S.AY_Item_Status__c= 'Canceled';
             opplW2S.NS_Discount_Amount__c = 10;
             opplW2S.AY_Item_Start_Date__c = system.today() + 7;
             update opplW2S;
