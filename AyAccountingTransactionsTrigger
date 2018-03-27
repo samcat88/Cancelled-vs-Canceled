@@ -21,7 +21,7 @@ trigger AyAccountingTransactions on OpportunityLineItem(after insert,after updat
               OpportunityLineItem oldItems = Trigger.oldMap.get(OptyLines.ID);
               
               if ((OptyLines.AY_Item_Status__c != oldItems.AY_Item_Status__c &&  OptyLines.AY_Item_Status__c == 'Active' )  
-                || (OptyLines.AY_Item_Status__c != oldItems.AY_Item_Status__c &&  OptyLines.AY_Item_Status__c == 'Cancelled') 
+                || (OptyLines.AY_Item_Status__c != oldItems.AY_Item_Status__c &&  OptyLines.AY_Item_Status__c == 'Canceled') 
                 || (OptyLines.AY_Item_Status__c != oldItems.AY_Item_Status__c &&  OptyLines.AY_Item_Status__c == 'Waitlisted')
                 || (OptyLines.AY_Item_Status__c != oldItems.AY_Item_Status__c &&  OptyLines.AY_Item_Status__c == 'Short Paid')
                 || (OptyLines.AY_Payments__c != oldItems.AY_Payments__c && OptyLines.AY_Payments__c != 0 && OptyLines.AY_Payments__c != null && OptyLines.AY_Item_Status__c == 'Waitlisted')
@@ -61,15 +61,15 @@ trigger AyAccountingTransactions on OpportunityLineItem(after insert,after updat
                      accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEFREV', '');    
                  } 
                  if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c < System.Today()){
-                     accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');                      
+                     accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELED', '');                      
                  }
                 
              
-              }else if (oldItems.AY_Item_Status__c == 'Short Paid' && OptyLines.AY_Item_Status__c == 'Cancelled'){ // Short Paid --> Cancelled   
+              }else if (oldItems.AY_Item_Status__c == 'Short Paid' && OptyLines.AY_Item_Status__c == 'Canceled'){ // Short Paid --> Canceled   
                  accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'SHORT PAIDREV', ''); 
              //Ashutosh end here.    
                      
-             }else if (oldItems.AY_Item_Status__c == 'Waitlisted' && OptyLines.AY_Item_Status__c == 'Cancelled'){ // WaitListed --> Cancelled
+             }else if (oldItems.AY_Item_Status__c == 'Waitlisted' && OptyLines.AY_Item_Status__c == 'Canceled'){ // WaitListed --> Canceled
                  accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'WAITLISTEDREV', '');
                  
              } else if (oldItems.AY_Item_Status__c == 'Active' && OptyLines.AY_Item_Status__c == 'Waitlisted'){ // Active --> WaitListed
@@ -78,28 +78,28 @@ trigger AyAccountingTransactions on OpportunityLineItem(after insert,after updat
                   if ( OptyLines.AY_Event_Start_Date__c > System.Today() ){
                       accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEFREV','');
                   }else if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c < System.Today()){
-                      accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');                      
+                      accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELED', '');                      
                   }
                  
              }
-             else if (oldItems.AY_Item_Status__c == 'Cancelled' && OptyLines.AY_Item_Status__c == 'Waitlisted'){ // Cancelled --> WaitListed
+             else if (oldItems.AY_Item_Status__c == 'Canceled' && OptyLines.AY_Item_Status__c == 'Waitlisted'){ // Canceled --> WaitListed
                  accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'WAITLISTED', '');
                  
              }
              
-             else if (oldItems.AY_Item_Status__c == 'Cancelled' && OptyLines.AY_Item_Status__c == 'Active'){ // Cancelled --> Active 
+             else if (oldItems.AY_Item_Status__c == 'Canceled' && OptyLines.AY_Item_Status__c == 'Active'){ // Canceled --> Active 
                  accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVE', '');
                  if(OptyLines.AY_Event_Start_Date__c > System.Today()){
                      accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'ACTIVEDEF', '');
                  }
              }
              
-             else if (oldItems.AY_Item_Status__c == 'Active' && OptyLines.AY_Item_Status__c == 'Cancelled'){ // Active --> Cancelled
+             else if (oldItems.AY_Item_Status__c == 'Active' && OptyLines.AY_Item_Status__c == 'Canceled'){ // Active --> Canceled
                 /*
                 if ( OptyLines.NS_Discount_Amount__c > 0 ){
                     system.debug('discount');
                     // Create Row for the Discount. 
-                    accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');
+                    accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELED', '');
                 } */
                 if ( OptyLines.AY_Event_Start_Date__c > System.Today() ){
                     // Create Row for the Deferred account also.. 
@@ -109,19 +109,19 @@ trigger AyAccountingTransactions on OpportunityLineItem(after insert,after updat
                     if(optyLines.AY_Item_Family__c == 'Event'){
                         accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'CANCEL', '');
                         if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c < System.Today()){
-                            accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');                      
+                            accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELED', '');                      
                         }
                     }else{
-                        accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'CANCELLED', '');
+                        accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'CANCELED', '');
                     }
                     
                     //if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c < System.Today()){
-                       // accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');                      
+                       // accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELED', '');                      
                     //}
                     
                     /*
-                        //Code commented by Ashutosh on 19/7/2016 because it creates REFUND JE along with Cancelled one
-                        //which is wrong. When the status is turned CANCELLED there should only a cancelled JE not a refund one.                    
+                        //Code commented by Ashutosh on 19/7/2016 because it creates REFUND JE along with Canceled one
+                        //which is wrong. When the status is turned CANCELED there should only a canceled JE not a refund one.                    
                     
                     If(OptyLines.AY_Transaction_3__c <> null){
                         accountHandlesClass.createAy_AS_Staging(optyLines, OptyLines.AY_Transaction_3__c, 'REFUND', '');
@@ -139,11 +139,11 @@ trigger AyAccountingTransactions on OpportunityLineItem(after insert,after updat
              else{
              
                 //Create row for status
-                If(oldItems.AY_Item_Status__c == NULL && OptyLines.AY_Item_Status__c == 'Cancelled' ){
+                If(oldItems.AY_Item_Status__c == NULL && OptyLines.AY_Item_Status__c == 'Canceled' ){
                     accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'CANCEL', '');
                     
                     if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c < System.Today()){
-                        accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELLED', '');                      
+                        accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCELED', '');                      
                     }else if(OptyLines.NS_Discount_Amount__c > 0 && OptyLines.AY_Event_Start_Date__c > System.Today()){
                         accountHandlesClass.createAy_AS_Staging(optyLines, NULL, 'DiscountCANCEL', '');                      
                     }
@@ -255,7 +255,7 @@ trigger AyAccountingTransactions on OpportunityLineItem(after insert,after updat
         for (OpportunityLineItem OptyLines : Trigger.new) {
          if (( OptyLines.AY_Ignore_for_Journal_Entries__c == False )&& (OptyLines.TotalPrice > 0)){
 
-          if (OptyLines.AY_Item_Status__c == 'Active' ||  OptyLines.AY_Item_Status__c == 'Cancelled' || OptyLines.AY_Item_Status__c == 'Waitlisted') { 
+          if (OptyLines.AY_Item_Status__c == 'Active' ||  OptyLines.AY_Item_Status__c == 'Canceled' || OptyLines.AY_Item_Status__c == 'Waitlisted') { 
           
             accountHandlesClass.createAy_AS_Staging(optyLines, NULL, OptyLines.AY_Item_Status__c.toUpperCase(), '');
             if ( OptyLines.AY_Event_Start_Date__c > System.Today() ){
