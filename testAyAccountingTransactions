@@ -1,0 +1,477 @@
+@isTest
+    public class testAyAccountingTransactions   {
+        static testMethod void testAyAccountingTransactions() {
+            //Insert Account
+             Account acc=new Account ();
+                acc.Name='Name';
+                insert acc;
+            //RecordType   
+          RecordType rt =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Transaction' limit 1]; 
+          
+           
+           //Payment Method
+           rC_Giving__Payment_Method__c PayMethod=new rC_Giving__Payment_Method__c();
+           PayMethod.Name='Payment';
+           PayMethod.rC_Giving__Account__c=acc.id;
+           insert PayMethod;
+          
+          //Insert AY_Council_GL_Account_Register__c
+          AY_Council_GL_Account_Register__c orgReg=new AY_Council_GL_Account_Register__c();
+          orgReg.name='text';
+          orgReg.Account__c=acc.id;
+          insert orgReg;
+          
+          //Insert AY_Organization_GL_Register_Record__c
+          AY_Organization_GL_Register_Record__c orgRegRec=new AY_Organization_GL_Register_Record__c();
+          orgRegRec.Name='name';
+          orgRegRec.AY_Council_GL_Item_Code__c='text234';
+          orgRegRec.AY_Council_Code_Identifier__c=orgReg.id;
+          orgRegRec.AY_Fin_Sub_Type__c='Financial Aid';
+          insert orgRegRec;
+               
+            //Insert Opportunity      
+              Opportunity opp=new opportunity();
+                opp.Name='name';
+                opp.StageName='Closed Won';
+                opp.CloseDate=System.today();
+                opp.Accountid= acc.id;
+                opp.rC_Giving__Giving_Amount__c=98;
+                opp.rC_Giving__Transaction_Type__c='Refund';
+                opp.rC_Giving__Payment_Method_Selected__c=PayMethod.id;
+                //opp.Financial_Aid_and_Others_GL__r=orgRegRec.id;
+                insert opp;    
+      Test.startTest();          
+                Opportunity op2=new opportunity();
+                op2.Name='name';
+                op2.StageName='Closed Won';
+                op2.CloseDate=System.today();
+                op2.Accountid= acc.id;
+                op2.rC_Giving__Giving_Amount__c=98;
+                op2.rC_Giving__Transaction_Type__c='Refund';
+                op2.rC_Giving__Payment_Method_Selected__c=PayMethod.id;
+                //opp.Financial_Aid_and_Others_GL__r=orgRegRec.id;
+                insert op2;            
+                
+                 //Insert GL Account
+     AcctSeed__GL_Account__c GL=new AcctSeed__GL_Account__c();
+                GL.Name = '2360-Output Tax Due';
+                GL.AcctSeed__Active__c = true;
+                GL.AcctSeed__Type__c = 'Balance Sheet';
+                GL.AcctSeed__Bank__c = true;
+                GL.AcctSeed__Sub_Type_1__c = 'Assets';
+                //GL.AcctSeed__Sub_Type_2__c = 'Cash';
+                insert GL;
+                
+                
+                        
+              //Insert Product  
+            Product2 prd1 = new Product2 (Name='Test_ppp',Description='Test Product Entry 1',productCode = 'ABC', isActive = true);
+                 Product2 pro=new product2();
+                 pro.Name='name';
+                 pro.AcctSeed__Unit_Cost__c=22;
+                 pro.IsActive=true;
+                 pro.productCode = '1o1';
+                 pro.rC_Inventory__Inventory_Received__c =5;
+                 pro.AcctSeed__Inventory_Product__c=true;
+                 pro.rC_Giving__Start_Date__c=system.today();
+                 pro.rC_Giving__End_Date__c=system.today();
+                 pro.Family='Membership';
+                 pro.AcctSeed__Inventory_Type__c='Raw Material';
+                 pro.AcctSeed__Revenue_GL_Account__c=GL.id;
+                 pro.AcctSeed__Inventory_GL_Account__c=GL.id;
+                 pro.AcctSeed__Expense_GL_Account__c = GL.id;
+                   insert  pro;
+                 
+     Id pricebookId = Test.getStandardPricebookId();
+            Opportunity op = new opportunity();
+            op.Name='name';
+            op.Pricebook2Id= pricebookId ;
+            op.StageName='Closed Won';
+            op.CloseDate=System.today();
+            op.Accountid= acc.id;
+            op.rC_Giving__Giving_Amount__c=3;
+            insert op;
+           
+              
+              //Insert CustomPriceBook   
+            Pricebook2 customPB = new Pricebook2(Name='Custom Pricebook', isActive=true);
+             insert customPB;           
+                        
+             //Insert PriceBook entry(standard)
+            PricebookEntry standardPrice = new PricebookEntry(
+                Pricebook2Id = pricebookId  , Product2Id = pro.Id,
+                UnitPrice = 10000, IsActive = true);
+                insert standardPrice;
+         
+         
+          PricebookEntry customPriceBookEntry = new PricebookEntry(
+               Pricebook2Id = customPB.Id  , Product2Id = pro.Id,
+               UnitPrice = 10000, IsActive = true);
+               insert customPriceBookEntry ;
+               
+            PricebookEntry customPrice = new PricebookEntry(
+                Pricebook2Id = customPB.Id, Product2Id = pro.Id,
+                UnitPrice = 12000, IsActive = true);
+                //Insert Oppline
+            OpportunityLineItem oppp=new OpportunityLineItem();
+                oppp.UnitPrice=10;
+                oppp.Quantity=1;
+                oppp.OpportunityId=opp.id;
+                oppp.PriceBookEntryId= customPriceBookEntry.id;
+                oppp.AY_Item_Status__c='Active';
+                oppp.AY_Transaction_2__c=opp.id;
+                oppp.AY_Transaction_1__c=op2.id;
+                oppp.AY_Transaction_3__c=op.id;
+                insert oppp;
+                
+                
+                oppp.AY_Transaction_3__c=op2.id;
+                update oppp;
+           Test.stopTest();     
+      
+            OpportunityLineItem oppls=new OpportunityLineItem();
+                oppls.UnitPrice=55;
+                oppls.Quantity=1;
+                oppls.OpportunityId=opp.id;
+                oppls.PriceBookEntryId= customPriceBookEntry.id;
+                oppls.AY_Item_Status__c='Waitlisted';
+                insert oppls;
+                oppls.AY_Item_Status__c='Active';
+                oppls.AY_Item_Start_Date__c = system.today() + 7;
+                update oppls;
+           
+            OpportunityLineItem oppls1=new OpportunityLineItem();
+            oppls1.UnitPrice=55;
+            oppls1.Quantity=1;
+            oppls1.OpportunityId=opp.id;
+            oppls1.PriceBookEntryId= customPriceBookEntry.id;
+            oppls1.AY_Item_Status__c='Active';
+            insert oppls1;
+            oppls1.AY_Item_Status__c='Waitlisted';
+            update  oppls1;
+        
+     
+                
+                
+         //Insert Gl Abila Mapping
+            AYGLAbilaMapping__c GLAbila= new AYGLAbilaMapping__c();
+            GLAbila.name='GLabila';
+            GLAbila.CL_Credit_Field__c='44';
+            GLAbila.CL_Credit_Field_Label__c='909';
+            GLAbila.CL_AS_debit_GL_Code__c='45';
+            GLAbila.CL_AS_Credit_GL_Code__c='4';
+            GLAbila.CL_Debit_Field__c='46';
+            GLAbila.CL_Debit_Field_Label__c='28';
+            insert GLAbila;  
+           
+           //Insert Custom setting
+           AyPaymentMethod__c GLAbil = new AyPaymentMethod__c();
+            GLAbil.name='GLAbil';
+            GLAbil.CL_AS_GL__c='98';
+            GLAbil.CL_Abila_Field__c='522';
+            GLAbil.CL_Abila_Field__c='21';
+             GLAbil.CL_AS_GL__c='22';
+             GLAbil.HQ_Abila_Field__c='8';
+             GLAbil.HQ_AS_GL__c='33';
+            insert GLAbil ;
+                
+                   // staging object
+        Ay_AS_Staging__c sc=new Ay_AS_Staging__c();
+            sc.AccountiD__c='3';
+            sc.Product__c=pro.id;
+            sc.Unit_Price__c=9;
+            sc.Total_Price__c=56;
+            sc.Type_Of_Call__c='CASH';
+             sc.Type_Of_Call__c='REFUND';
+            sc.Council_GL_Account_Register__c='text1';
+            sc.Discount__c=99;
+            sc.Parent_Giving__c=opp.id;
+            sc.Council_GL_Account_Register__c='text2';
+            sc.Household_Council_Code__c='555';
+            sc.Total_Price__c=99;
+            sc.Item_Start_Date__c=System.today();
+            sc.Transaction_1__c=opp.id;
+            sc.Item_Family__c='qwerty';
+            
+            sc.Payments__c=44;
+               insert sc; 
+                
+                
+                }
+            
+            /*Another method for Status Change in opportunity line*/
+                public static testMethod void testAyAccountingTransactions2() {     
+                     Account acc=new Account ();
+                      acc.Name='Name';
+                       insert acc;
+      RecordType rt =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Transaction' limit 1];      
+         
+      
+          Opportunity opp=new opportunity();
+            opp.Name='name';
+            opp.StageName='Closed Won';
+            opp.CloseDate=System.today();
+            opp.Accountid= acc.id;
+            opp.rC_Giving__Giving_Amount__c=98;
+            opp.rC_Giving__Transaction_Type__c='Refund';
+            insert opp;
+            
+            
+             Opportunity opp2=new opportunity();
+            opp2.Name='name';
+            opp2.StageName='Closed Won';
+            opp2.CloseDate=System.today();
+            opp2.Accountid= acc.id;
+            opp2.rC_Giving__Giving_Amount__c=98;
+            opp2.rC_Giving__Transaction_Type__c='Refund';
+            insert opp2;
+            
+            
+             //Insert GL Account
+     AcctSeed__GL_Account__c GL=new AcctSeed__GL_Account__c();
+                GL.Name = '2360-Output Tax Due';
+                GL.AcctSeed__Active__c = true;
+                GL.AcctSeed__Type__c = 'Balance Sheet';
+                GL.AcctSeed__Bank__c = true;
+                GL.AcctSeed__Sub_Type_1__c = 'Assets';
+                //GL.AcctSeed__Sub_Type_2__c = 'Cash';
+                insert GL;
+            
+            
+        Product2 prd1 = new Product2 (Name='Test_ppp',Description='Test Product Entry 1',productCode = 'ABC', isActive = true);
+            insert prd1;
+            Product2 pro=new product2();
+            pro.Name='name';
+            pro.AcctSeed__Unit_Cost__c=22;
+            pro.IsActive=true;
+            pro.rC_Inventory__Inventory_Received__c =5;
+            pro.AcctSeed__Inventory_Product__c=true;
+            pro.productCode = '1o1';
+            pro.rC_Giving__Start_Date__c=system.today();
+            pro.rC_Giving__End_Date__c=system.today();
+            pro.Family='Membership';
+            pro.AcctSeed__Inventory_Type__c='Raw Material';
+                 pro.AcctSeed__Revenue_GL_Account__c=GL.id;
+                 pro.AcctSeed__Inventory_GL_Account__c=GL.id;
+            pro.AcctSeed__Expense_GL_Account__c =GL.id;
+            insert  pro;
+            
+            Id pricebookId = Test.getStandardPricebookId();
+         Test.startTest();   
+            Opportunity op = new opportunity();
+            op.Name='name';
+            op.Pricebook2Id= pricebookId ;
+            op.StageName='Closed Won';
+            op.CloseDate=System.today();
+            op.Accountid= acc.id;
+            op.rC_Giving__Giving_Amount__c=3;
+            insert op;
+            
+        Pricebook2 customPB = new Pricebook2(Name='Custom Pricebook', isActive=true);
+        insert customPB;
+       
+        PricebookEntry standardPrice = new PricebookEntry(
+            Pricebook2Id = pricebookId  , Product2Id = pro.Id,
+            UnitPrice = 10000, IsActive = true);
+        insert standardPrice;
+        
+       
+        PricebookEntry customPriceBookEntry = new PricebookEntry(
+               Pricebook2Id = customPB.Id  , Product2Id = pro.Id,
+               UnitPrice = 10000, IsActive = true);
+               insert customPriceBookEntry ;
+       
+        PricebookEntry customPrice = new PricebookEntry(
+            Pricebook2Id =  pricebookId , Product2Id = pro.Id,
+               UnitPrice = 12000, IsActive = true);
+           OpportunityLineItem oppp=new OpportunityLineItem();
+            oppp.UnitPrice=10;
+            oppp.Quantity=1;
+            oppp.OpportunityId=opp.id;
+            oppp.PriceBookEntryId= customPriceBookEntry.id;
+            oppp.AY_Item_Status__c='Cancelled';
+            oppp.AY_Transaction_2__c=opp.id;
+            oppp.AY_Transaction_1__c=opp2.id;
+            oppp.AY_Transaction_3__c=op.id;
+       
+                insert oppp;
+        oppp.AY_Transaction_2__c=op.id;
+        update oppp;
+         Test.stopTest();   
+            OpportunityLineItem oppls1=new OpportunityLineItem();
+            oppls1.UnitPrice=55;
+            oppls1.Quantity=1;
+            oppls1.OpportunityId=opp.id;
+            oppls1.PriceBookEntryId= customPriceBookEntry.id;
+            oppls1.AY_Item_Status__c='Waitlisted';
+            insert oppls1;
+            
+            oppls1.AY_Item_Status__c='Cancelled';
+            update  oppls1;
+    
+            oppls1.AY_Item_Status__c='Refund';
+            update oppls1;
+                     
+ 
+                        
+        }   
+     
+       /*Another method for Status Change in opportunity line*/
+                public static testMethod void testAyAccountingTransactions3() {     
+                     Account acc=new Account ();
+                      acc.Name='Name';
+                       insert acc;
+      RecordType rt =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Transaction' limit 1];      
+      Test.startTest();   
+          Opportunity opp=new opportunity();
+            opp.Name='name';
+            opp.StageName='Closed Won';
+            opp.CloseDate=System.today();
+            opp.Accountid= acc.id;
+            opp.rC_Giving__Giving_Amount__c=98;
+            opp.rC_Giving__Transaction_Type__c='Refund';
+            insert opp;
+            
+             Opportunity op2=new opportunity();
+            op2.Name='name';
+            op2.StageName='Closed Won';
+            op2.CloseDate=System.today();
+            op2.Accountid= acc.id;
+            op2.rC_Giving__Giving_Amount__c=98;
+            op2.rC_Giving__Transaction_Type__c='Refund';
+            insert op2;
+            
+             //Insert GL Account
+     AcctSeed__GL_Account__c GL=new AcctSeed__GL_Account__c();
+                GL.Name = '2360-Output Tax Due';
+                GL.AcctSeed__Active__c = true;
+                GL.AcctSeed__Type__c = 'Balance Sheet';
+                GL.AcctSeed__Bank__c = true;
+                GL.AcctSeed__Sub_Type_1__c = 'Assets';
+                //GL.AcctSeed__Sub_Type_2__c = 'Cash';
+                insert GL;
+            
+            
+        Product2 prd1 = new Product2 (Name='Test_ppp',Description='Test Product Entry 1',productCode = 'ABC', isActive = true);
+            insert prd1;
+            Product2 pro=new product2();
+            pro.Name='name';
+            pro.AcctSeed__Unit_Cost__c=22;
+            pro.IsActive=true;
+             pro.rC_Inventory__Inventory_Received__c =5;
+            pro.AcctSeed__Inventory_Product__c=true;
+            pro.productCode = '1o1';
+            pro.rC_Giving__Start_Date__c=system.today();
+            pro.rC_Giving__End_Date__c=system.today();
+            pro.Family='Membership';
+            pro.AcctSeed__Inventory_Type__c='Raw Material';
+                 pro.AcctSeed__Revenue_GL_Account__c=GL.id;
+                 pro.AcctSeed__Inventory_GL_Account__c=GL.id;
+            pro.AcctSeed__Expense_GL_Account__c =GL.id;
+            insert  pro;
+    Test.stopTest();         
+            Id pricebookId = Test.getStandardPricebookId();
+            Opportunity op = new opportunity();
+            op.Name='name';
+            op.Pricebook2Id= pricebookId ;
+            op.StageName='Closed Won';
+            op.CloseDate=System.today();
+            op.Accountid= acc.id;
+            op.rC_Giving__Giving_Amount__c=3;
+            insert op;
+            
+        Pricebook2 customPB = new Pricebook2(Name='Custom Pricebook', isActive=true);
+        insert customPB;
+       
+        PricebookEntry standardPrice = new PricebookEntry(
+            Pricebook2Id = pricebookId  , Product2Id = pro.Id,
+            UnitPrice = 10000, IsActive = true);
+        insert standardPrice;
+        
+       
+        PricebookEntry customPriceBookEntry = new PricebookEntry(
+               Pricebook2Id = customPB.Id  , Product2Id = pro.Id,
+               UnitPrice = 10000, IsActive = true);
+               insert customPriceBookEntry ;
+       
+        PricebookEntry customPrice = new PricebookEntry(
+            Pricebook2Id =  pricebookId , Product2Id = pro.Id,
+               UnitPrice = 12000, IsActive = true);
+           
+           OpportunityLineItem oppp=new OpportunityLineItem();
+            oppp.UnitPrice=10;
+            oppp.Quantity=1;
+            oppp.OpportunityId=opp.id;
+            oppp.PriceBookEntryId= customPriceBookEntry.id;
+            oppp.AY_Item_Status__c='Cancelled';
+            oppp.AY_Transaction_2__c=opp.id;
+            oppp.AY_Transaction_1__c=op2.id;
+            oppp.AY_Transaction_3__c=op.id;
+            insert oppp;
+              
+            oppp.AY_Transaction_1__c=op.id;
+            update oppp ;
+           
+            
+            
+            OpportunityLineItem oppls1=new OpportunityLineItem();
+            oppls1.UnitPrice=55;
+            oppls1.Quantity=1;
+            oppls1.OpportunityId=opp.id;
+            oppls1.PriceBookEntryId= customPriceBookEntry.id;
+            oppls1.AY_Item_Status__c='Cancelled';
+            insert oppls1;
+            oppls1.AY_Item_Status__c='Waitlisted';
+            update  oppls1;
+        
+        OpportunityLineItem oppls=new OpportunityLineItem();
+            oppls.UnitPrice=55;
+            oppls.Quantity=1;
+            oppls.OpportunityId=opp.id;
+            oppls.PriceBookEntryId= customPriceBookEntry.id;
+            oppls.AY_Item_Status__c='Waitlisted';
+            insert oppls;
+            oppls.AY_Item_Status__c='Cancelled';
+            update oppls;
+                     
+       OpportunityLineItem opplW2S = new OpportunityLineItem();
+            opplW2S.UnitPrice=55;
+            opplW2S.Quantity=1;
+            opplW2S.OpportunityId=opp.id;
+            opplW2S.PriceBookEntryId= customPriceBookEntry.id;
+            opplW2S.AY_Item_Status__c='Short Paid';
+            insert opplW2S;
+            opplW2S.AY_Item_Status__c='Waitlisted';
+            update opplW2S;
+            opplW2S.AY_Item_Status__c='Short Paid';
+            update opplW2S; 
+            opplW2S.AY_Item_Status__c='Active';
+            opplW2S.AY_Item_Start_Date__c = system.today() + 7;
+            update opplW2S;
+            opplW2S.AY_Item_Status__c='Short Paid';
+            update opplW2S;
+            opplW2S.AY_Item_Status__c='Cancelled';
+            update opplW2S;
+            opplW2S.AY_Item_Status__c= NULL;
+            update opplW2S;
+            opplW2S.AY_Item_Status__c= 'Cancelled';
+            opplW2S.NS_Discount_Amount__c = 10;
+            opplW2S.AY_Item_Start_Date__c = system.today() - 7;
+            update opplW2S;
+            opplW2S.AY_Item_Status__c= 'Active';
+            update opplW2S;
+            opplW2S.AY_Item_Status__c= 'Cancelled';
+            opplW2S.AY_Item_Start_Date__c = system.today() + 7;
+            update opplW2S;
+            opplW2S.AY_Item_Status__c= NULL;
+            update opplW2S;
+            opplW2S.AY_Item_Status__c= 'Cancelled';
+            opplW2S.NS_Discount_Amount__c = 10;
+            opplW2S.AY_Item_Start_Date__c = system.today() + 7;
+            update opplW2S;
+       
+        }   
+     
+     
+     
+            }
