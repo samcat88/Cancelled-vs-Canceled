@@ -758,7 +758,7 @@
             sc3.Product__c=pro.id;
             sc3.Unit_Price__c=9;
             sc3.Total_Price__c=56;
-            sc3.Type_Of_Call__c='CANCELLED';
+            sc3.Type_Of_Call__c='CANCELED';
             sc3.Council_GL_Account_Register__c='999';
            // sc.Discount__c=99;
             sc3.Parent_Giving__c=op.id;
