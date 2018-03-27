@@ -295,8 +295,8 @@ public class AyAccountingHandler  {
                 System.debug('------------------------'+ayCouncilGL) ;
                 
                //Added by prateek  
-               If (ayStaging.Type_Of_Call__c == 'CANCEL' || ayStaging.Type_Of_Call__c == 'CANCELLED' || 
-                   ayStaging.Type_Of_Call__c == 'DiscountCANCEL' || ayStaging.Type_Of_Call__c == 'DiscountCANCELLED') {
+               If (ayStaging.Type_Of_Call__c == 'CANCEL' || ayStaging.Type_Of_Call__c == 'CANCELED' || 
+                   ayStaging.Type_Of_Call__c == 'DiscountCANCEL' || ayStaging.Type_Of_Call__c == 'DiscountCANCELED') {
                 
                 je.Item_Start_Date__c = date.today() ;
                 
