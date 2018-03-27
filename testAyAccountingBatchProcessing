@@ -1,0 +1,806 @@
+@isTest(seeAlldata=true)
+    public class testAyAccountingBatchProcessing   {
+        
+     static testMethod void testCashTransactions() {
+        // create account object
+      Account acc=new Account ();
+            acc.Name='Name';
+            insert acc;
+            
+            // create organization registers 
+       AY_Council_GL_Account_Register__c agl = new AY_Council_GL_Account_Register__c();
+            agl.Name='texttt';
+            insert agl;
+            // insert payment method
+       RecordType py=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Gift Certificates' limit 1];
+            rC_Giving__Payment_Method__c pm1 =new rC_Giving__Payment_Method__c();
+            pm1 .rC_Giving__Account__c=acc.id;
+            pm1 .RecordTypeId=py.id;
+            pm1 .rC_Giving__Billing_Country__c='IN';
+            pm1 .rC_Giving__Billing_Postal_Code__c='12345';
+            pm1 .rC_Giving__Is_Active__c=true;
+            insert pm1 ;
+            /// insert payment
+        RecordType pyl=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal - Memberships' limit 1];
+            rC_Giving__Payment_Method__c pm2 =new rC_Giving__Payment_Method__c();
+            pm2.rC_Giving__Account__c=acc.id;
+            pm2.Name = 'Paypal - Memberships';
+            pm2.RecordTypeId=pyl.id;
+            pm2.rC_Giving__Billing_Country__c='IN';
+            pm2.rC_Giving__Billing_Postal_Code__c='12345';
+            pm2.rC_Giving__Is_Active__c=true;
+            insert pm2 ;  
+          // insert payment
+        
+       
+            
+       RecordType py2=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal - Memberships' limit 1];
+            rC_Giving__Payment_Method__c pm =new rC_Giving__Payment_Method__c();
+            
+            pm.rC_Giving__Account__c=acc.id;
+            pm.RecordTypeId=py.id;
+            pm.rC_Giving__Billing_Country__c='US';
+            pm.rC_Giving__Billing_Postal_Code__c='12345';
+            pm.rC_Giving__Is_Active__c=true;
+            insert pm;
+            //new paymennt method
+      RecordType py1=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Cash/Check' limit 1];
+            rC_Giving__Payment_Method__c pmc =new rC_Giving__Payment_Method__c();
+            pmc.rC_Giving__Account__c=acc.id;
+            pmc.RecordTypeId=py1.id;
+            pmc.rC_Giving__Billing_Country__c='IN';
+            pmc.rC_Giving__Billing_Postal_Code__c='12345';
+            pmc.rC_Giving__Is_Active__c=true;
+            insert pmc; 
+            // new paymet method
+            
+      RecordType py3=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal' limit 1];
+            rC_Giving__Payment_Method__c pm4 =new rC_Giving__Payment_Method__c();
+            pm4.rC_Giving__Account__c=acc.id;
+            pm4.RecordTypeId=py3.id;
+            pm4.rC_Giving__Billing_Country__c='IN';
+            pm4.rC_Giving__Billing_Postal_Code__c='12345';
+            pm4.rC_Giving__Is_Active__c=true;
+            insert pm4 ;
+            // insert AY_Organization_GL_Register_Record__c
+        AY_Organization_GL_Register_Record__c rrc= new AY_Organization_GL_Register_Record__c();
+            rrc.Name='tc';
+            rrc.AY_Council_Code_Identifier__c=agl.id;
+            rrc.AY_Council_GL_Item_Code__c='12364';
+            insert rrc;
+            // user enter 
+         Profile p = [SELECT Id,name  FROM Profile WHERE Name='System Administrator']; 
+                    User u = new User(Alias = 'stan4', Email='standarduser456@testorg.com', 
+                        EmailEncodingKey='UTF-8', LastName='Testing456', LanguageLocaleKey='en_US', 
+                        Council_Code__c = 999,LocaleSidKey='en_US', ProfileId = p.Id, 
+                        TimeZoneSidKey='America/Los_Angeles', UserName='mnjbjnjknkb@gmil.com');
+                    insert u ;
+               // insert gl registers 
+     
+                  
+       // Create 2 varaiables for councile 999
+        AcctSeed__Accounting_Variable__c av = new AcctSeed__Accounting_Variable__c();
+            av.AcctSeed__Type__c='GL Account Variable 1';
+            av.AcctSeed__Active__c=true;
+            av.Name = '999';
+            insert av;
+        AcctSeed__Accounting_Variable__c avarb= new AcctSeed__Accounting_Variable__c();
+            avarb.AcctSeed__Type__c='GL Account Variable 2';
+            avarb.AcctSeed__Active__c=true;
+            avarb.name = 'Membership';
+            insert avarb;
+       // Lets create Giving Record  
+             //Insert opportunity
+         RecordType rt =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Membership' limit 1];
+           
+            Opportunity opp=new opportunity();
+            opp.Name='name';
+            opp.StageName='Closed Won';
+            opp.CloseDate=System.today();
+            opp.RecordTypeId = rt.id;
+            opp.Accountid= acc.id;
+            opp.rC_Giving__Giving_Amount__c=98;
+            opp.Ownerid = u.id;
+            insert opp;
+            // insert opprotunity    new 
+        RecordType rtmem =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Transaction' limit 1];
+       
+          Id pricebookId = Test.getStandardPricebookId();
+            Opportunity op = new opportunity();
+            op.Name='name';
+            op.Pricebook2Id= pricebookId ;
+            op.StageName='Closed Won';
+            op.CloseDate=System.today();
+            op.Accountid= acc.id;
+            op.RecordTypeId = rt.id;
+            op.rC_Giving__Parent__c = opp.id;
+            op.rC_Giving__Transaction_Type__c = 'Payment';
+            op.rC_Giving__Payment_Method_Selected__c = pM2.id; 
+            op.Amount=15;
+            op.Ownerid = u.id;
+            op.rC_Giving__Giving_Amount__c=15;
+            insert op;
+         // Create a Refund Transaction
+         Opportunity oprefund = new opportunity();
+            oprefund.Name='name';
+            oprefund.Pricebook2Id= pricebookId ;
+            oprefund.StageName='Closed Won';
+            oprefund.CloseDate=System.today();
+            oprefund.Accountid= acc.id;
+            oprefund.RecordTypeId = rt.id;
+            oprefund.rC_Giving__Parent__c = opp.id;
+            oprefund.rC_Giving__Transaction_Type__c = 'Refund';
+            oprefund.rC_Giving__Payment_Method_Selected__c = pM2.id; 
+            oprefund.Amount=15;
+            oprefund.Ownerid = u.id;
+            oprefund.rC_Giving__Giving_Amount__c=15;
+            insert oprefund;
+               
+         
+       Product2 prd1 = new Product2 (Name='Test_ppp',Description='Test Product Entry 1',productCode = 'ABC', isActive = true);
+            insert prd1;
+            // pricebook entry object
+           
+      RecordType rp =[select id,Name from RecordType where sObjectType='Product2' AND Name='Membership' limit 1];
+            Product2 pro=new product2();
+            pro.RecordTypeId = rp.Id;
+            pro.Name='name';
+            pro.AcctSeed__Unit_Cost__c=22;
+            pro.IsActive=true;
+            pro.productCode = '1o1';
+            pro.rC_Giving__Start_Date__c=system.today();
+            pro.rC_Giving__End_Date__c=system.today();
+            pro.Family='Membership';
+            insert  pro;
+   
+   
+           Test.startTest() ;         
+           // staging object
+           // Payment
+           Ay_AS_Staging__c sc1=new Ay_AS_Staging__c();
+            sc1.AccountiD__c= acc.id;
+            sc1.Discount__c=1;
+            sc1.Product__c=pro.id;
+            sc1.Unit_Price__c=9;
+            sc1.Total_Price__c=56;
+            sc1.Type_Of_Call__c='CASH';
+            sc1.Council_GL_Account_Register__c='999';
+           // sc.Discount__c=99;
+            sc1.Parent_Giving__c=opp.id;
+            sc1.Transaction_1__c = op.id;
+            sc1.Household_Council_Code__c='999';
+            sc1.Total_Price__c=15;
+            sc1.Item_Start_Date__c=System.today() - 5;
+            sc1.Transaction_1__c=op.id;
+            sc1.Item_Family__c='Membership';
+            sc1.Payments__c=15;
+            insert sc1 ; 
+            Set<id> ids = new Set<id>(); 
+            ids.add(sc1.id); 
+           
+    
+         String Query  = 'Select id,name ,AccountiD__c , Deferred_Revenue_GL_Code__c,JE_Date__c,'
+                          + 'AY_Calc_Amount__c, AY_Calc_Start_Date__c,Parent_Giving__c, OpportunityOwner__c,'
+                          + 'Financial_Aid_Code__c, Financial_Aid_Label__c,Council_GL_Account_Register__c,Discount__c,'
+                          + 'Household_Council_Code__c ,Item_Family__c ,Item_Start_Date__c,OpportunityId__c,'
+                          + 'OpportunityLineId__c  ,Ay_Payment_Method__c ,Payments__c,Product__c,Type_Of_Call__c ,'
+                          + 'Unit_Price__c,Total_Price__c,Transaction_1__c , Deferred_Item_Discount_GL__c,'
+                          + 'Deferred_Item_Discount_GL_Code__c, Deferred_Receivable_GL__c, Deferred_Receivable_GL_Code__c,'
+                          + 'Deferred_Revenue_GL__c,Item_Discount_GL__c, Item_Discount_GL_Code__c , Opportunity_Owner_Id__c,'
+                          + 'Receivable_GL__c, receivable_GL_Code__c,NO_CL__c, Revenue_GL__c, Revenue_GL_Code__c from Ay_AS_Staging__c';
+       
+         System.runAs(u) {
+         
+        AyAccountingBatchProcessing oBatch= new AyAccountingBatchProcessing(Query, ids);
+                    database.executeBatch(oBatch,5) ;
+     
+         }
+       Test.stopTest()  ; 
+     } 
+         
+    static testMethod void testRefundTransactions() {
+        // create account object
+      Account acc=new Account ();
+            acc.Name='Name';
+            insert acc;
+            
+            // create organization registers 
+       AY_Council_GL_Account_Register__c agl = new AY_Council_GL_Account_Register__c();
+            agl.Name='texttt';
+            insert agl;
+            // insert payment method
+       RecordType py=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Gift Certificates' limit 1];
+            rC_Giving__Payment_Method__c pm1 =new rC_Giving__Payment_Method__c();
+            pm1 .rC_Giving__Account__c=acc.id;
+            pm1 .RecordTypeId=py.id;
+            pm1 .rC_Giving__Billing_Country__c='IN';
+            pm1 .rC_Giving__Billing_Postal_Code__c='12345';
+            pm1 .rC_Giving__Is_Active__c=true;
+            insert pm1 ;
+            /// insert payment
+        RecordType pyl=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal - Memberships' limit 1];
+            rC_Giving__Payment_Method__c pm2 =new rC_Giving__Payment_Method__c();
+            pm2.rC_Giving__Account__c=acc.id;
+            pm2.RecordTypeId=pyl.id;
+            pm2.rC_Giving__Billing_Country__c='IN';
+            pm2.rC_Giving__Billing_Postal_Code__c='12345';
+            pm2.rC_Giving__Is_Active__c=true;
+            insert pm2 ;  
+          // insert payment
+        
+       
+            
+       RecordType py2=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal' limit 1];
+            rC_Giving__Payment_Method__c pm =new rC_Giving__Payment_Method__c();
+            pm.rC_Giving__Account__c=acc.id;
+            pm.RecordTypeId=py.id;
+            pm.rC_Giving__Billing_Country__c='IN';
+            pm.rC_Giving__Billing_Postal_Code__c='12345';
+            pm.rC_Giving__Is_Active__c=true;
+            insert pm;
+            //new paymennt method
+      RecordType py1=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Cash/Check' limit 1];
+            rC_Giving__Payment_Method__c pmc =new rC_Giving__Payment_Method__c();
+            pmc.rC_Giving__Account__c=acc.id;
+            pmc.RecordTypeId=py1.id;
+            pmc.rC_Giving__Billing_Country__c='IN';
+            pmc.rC_Giving__Billing_Postal_Code__c='12345';
+            pmc.rC_Giving__Is_Active__c=true;
+            insert pmc; 
+            // new paymet method
+            
+      RecordType py3=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal' limit 1];
+            rC_Giving__Payment_Method__c pm4 =new rC_Giving__Payment_Method__c();
+            pm4.rC_Giving__Account__c=acc.id;
+            pm4.RecordTypeId=py3.id;
+            pm4.rC_Giving__Billing_Country__c='IN';
+            pm4.rC_Giving__Billing_Postal_Code__c='12345';
+            pm4.rC_Giving__Is_Active__c=true;
+            insert pm4 ;
+            // insert AY_Organization_GL_Register_Record__c
+        AY_Organization_GL_Register_Record__c rrc= new AY_Organization_GL_Register_Record__c();
+            rrc.Name='tc';
+            rrc.AY_Council_Code_Identifier__c=agl.id;
+            rrc.AY_Council_GL_Item_Code__c='12364';
+            insert rrc;
+            // user enter 
+         Profile p = [SELECT Id,name  FROM Profile WHERE Name='System Administrator']; 
+                    User u = new User(Alias = 'stan4', Email='standarduser456@testorg.com', 
+                        EmailEncodingKey='UTF-8', LastName='Testing456', LanguageLocaleKey='en_US', 
+                        Council_Code__c = 999,LocaleSidKey='en_US', ProfileId = p.Id, 
+                        TimeZoneSidKey='America/Los_Angeles', UserName='mnjbjnjknkb@gmil.com');
+                    insert u ;
+               // insert gl registers 
+     
+                  
+       // Create 2 varaiables for councile 999
+        AcctSeed__Accounting_Variable__c av = new AcctSeed__Accounting_Variable__c();
+            av.AcctSeed__Type__c='GL Account Variable 1';
+            av.AcctSeed__Active__c=true;
+            av.Name = '999';
+            insert av;
+        AcctSeed__Accounting_Variable__c avarb= new AcctSeed__Accounting_Variable__c();
+            avarb.AcctSeed__Type__c='GL Account Variable 2';
+            avarb.AcctSeed__Active__c=true;
+            avarb.name = 'Membership';
+            insert avarb;
+       // Lets create Giving Record  
+             //Insert opportunity
+         RecordType rt =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Membership' limit 1];
+           
+            Opportunity opp=new opportunity();
+            opp.Name='name';
+            opp.StageName='Closed Won';
+            opp.CloseDate=System.today();
+            opp.RecordTypeId = rt.id;
+            opp.Accountid= acc.id;
+            opp.rC_Giving__Giving_Amount__c=98;
+            opp.Ownerid = u.id;
+            insert opp;
+            // insert opprotunity    new 
+        RecordType rtmem =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Transaction' limit 1];
+       
+          Id pricebookId = Test.getStandardPricebookId();
+            Opportunity op = new opportunity();
+            op.Name='name';
+            op.Pricebook2Id= pricebookId ;
+            op.StageName='Closed Won';
+            op.CloseDate=System.today();
+            op.Accountid= acc.id;
+            op.RecordTypeId = rt.id;
+            op.rC_Giving__Parent__c = opp.id;
+            op.rC_Giving__Transaction_Type__c = 'Payment';
+            op.rC_Giving__Payment_Method_Selected__c = pM2.id; 
+            op.Amount=15;
+            op.Ownerid = u.id;
+            op.rC_Giving__Giving_Amount__c=15;
+            insert op;
+         // Create a Refund Transaction
+         Opportunity oprefund = new opportunity();
+            oprefund.Name='name';
+            oprefund.Pricebook2Id= pricebookId ;
+            oprefund.StageName='Closed Won';
+            oprefund.CloseDate=System.today();
+            oprefund.Accountid= acc.id;
+            oprefund.RecordTypeId = rt.id;
+            oprefund.rC_Giving__Parent__c = opp.id;
+            oprefund.rC_Giving__Transaction_Type__c = 'Refund';
+            oprefund.rC_Giving__Payment_Method_Selected__c = pM2.id; 
+            oprefund.Amount=15;
+            oprefund.Ownerid = u.id;
+            oprefund.rC_Giving__Giving_Amount__c=15;
+            insert oprefund;
+               
+         
+       Product2 prd1 = new Product2 (Name='Test_ppp',Description='Test Product Entry 1',productCode = 'ABC', isActive = true);
+            insert prd1;
+            // pricebook entry object
+           
+      RecordType rp =[select id,Name from RecordType where sObjectType='Product2' AND Name='Membership' limit 1];
+            Product2 pro=new product2();
+            pro.RecordTypeId = rp.Id;
+            pro.Name='name';
+            pro.AcctSeed__Unit_Cost__c=22;
+            pro.IsActive=true;
+            pro.productCode = '1o1';
+            pro.rC_Giving__Start_Date__c=system.today();
+            pro.rC_Giving__End_Date__c=system.today();
+            pro.Family='Membership';
+            insert  pro;
+   
+           
+       Test.startTest(); 
+       
+           // Refund
+           Ay_AS_Staging__c sc2=new Ay_AS_Staging__c();
+            sc2.AccountiD__c= acc.id;
+            sc2.Discount__c=1;
+            sc2.Product__c=pro.id;
+            sc2.Unit_Price__c=9;
+            sc2.Total_Price__c=56;
+            sc2.Type_Of_Call__c='REFUND';
+            sc2.Council_GL_Account_Register__c='999';
+            
+           // sc.Discount__c=99;
+            sc2.Parent_Giving__c=op.id;
+            sc2.Transaction_1__c = opp.id;
+            sc2.Household_Council_Code__c='999';
+            sc2.Total_Price__c=15;
+            sc2.Item_Start_Date__c=System.today() - 5;
+            sc2.Transaction_1__c=oprefund.id;
+            sc2.Item_Family__c='Membership';
+            sc2.Payments__c=15;
+            insert sc2 ; 
+            Set<id> ids = new Set<id>(); 
+            ids.add(sc2.id); 
+              
+         String Query  = 'Select id,name ,AccountiD__c , Deferred_Revenue_GL_Code__c,JE_Date__c,'
+                          + 'AY_Calc_Amount__c, AY_Calc_Start_Date__c,Parent_Giving__c, OpportunityOwner__c,'
+                          + 'Financial_Aid_Code__c, Financial_Aid_Label__c,Council_GL_Account_Register__c,Discount__c,'
+                          + 'Household_Council_Code__c ,Item_Family__c ,Item_Start_Date__c,OpportunityId__c,'
+                          + 'OpportunityLineId__c  ,Ay_Payment_Method__c ,Payments__c,Product__c,Type_Of_Call__c ,'
+                          + 'Unit_Price__c,Total_Price__c,Transaction_1__c , Deferred_Item_Discount_GL__c,'
+                          + 'Deferred_Item_Discount_GL_Code__c, Deferred_Receivable_GL__c, Deferred_Receivable_GL_Code__c,'
+                          + 'Deferred_Revenue_GL__c,Item_Discount_GL__c, Item_Discount_GL_Code__c , Opportunity_Owner_Id__c,'
+                          + 'Receivable_GL__c, receivable_GL_Code__c,NO_CL__c, Revenue_GL__c, Revenue_GL_Code__c from Ay_AS_Staging__c';
+       
+         System.runAs(u) {
+         
+        AyAccountingBatchProcessing oBatch= new AyAccountingBatchProcessing(Query, ids);
+                    database.executeBatch(oBatch,5) ;
+     
+                      }
+        Test.stopTest() ;             
+         } 
+         
+     static testMethod void testActiveTransactions() {
+        // create account object
+      Account acc=new Account ();
+            acc.Name='Name';
+            insert acc;
+            
+            // create organization registers 
+       AY_Council_GL_Account_Register__c agl = new AY_Council_GL_Account_Register__c();
+            agl.Name='texttt';
+            insert agl;
+            // insert payment method
+       RecordType py=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Gift Certificates' limit 1];
+            rC_Giving__Payment_Method__c pm1 =new rC_Giving__Payment_Method__c();
+            pm1 .rC_Giving__Account__c=acc.id;
+            pm1 .RecordTypeId=py.id;
+            pm1 .rC_Giving__Billing_Country__c='IN';
+            pm1 .rC_Giving__Billing_Postal_Code__c='12345';
+            pm1 .rC_Giving__Is_Active__c=true;
+            insert pm1 ;
+            /// insert payment
+        RecordType pyl=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal - Memberships' limit 1];
+            rC_Giving__Payment_Method__c pm2 =new rC_Giving__Payment_Method__c();
+            pm2.rC_Giving__Account__c=acc.id;
+            pm2.RecordTypeId=pyl.id;
+            pm2.rC_Giving__Billing_Country__c='IN';
+            pm2.rC_Giving__Billing_Postal_Code__c='12345';
+            pm2.rC_Giving__Is_Active__c=true;
+            insert pm2 ;  
+          // insert payment
+        
+       
+            
+       RecordType py2=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal' limit 1];
+            rC_Giving__Payment_Method__c pm =new rC_Giving__Payment_Method__c();
+            pm.rC_Giving__Account__c=acc.id;
+            pm.RecordTypeId=py.id;
+            pm.rC_Giving__Billing_Country__c='IN';
+            pm.rC_Giving__Billing_Postal_Code__c='12345';
+            pm.rC_Giving__Is_Active__c=true;
+            insert pm;
+            //new paymennt method
+      RecordType py1=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Cash/Check' limit 1];
+            rC_Giving__Payment_Method__c pmc =new rC_Giving__Payment_Method__c();
+            pmc.rC_Giving__Account__c=acc.id;
+            pmc.RecordTypeId=py1.id;
+            pmc.rC_Giving__Billing_Country__c='IN';
+            pmc.rC_Giving__Billing_Postal_Code__c='12345';
+            pmc.rC_Giving__Is_Active__c=true;
+            insert pmc; 
+            // new paymet method
+            
+      RecordType py3=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal' limit 1];
+            rC_Giving__Payment_Method__c pm4 =new rC_Giving__Payment_Method__c();
+            pm4.rC_Giving__Account__c=acc.id;
+            pm4.RecordTypeId=py3.id;
+            pm4.rC_Giving__Billing_Country__c='IN';
+            pm4.rC_Giving__Billing_Postal_Code__c='12345';
+            pm4.rC_Giving__Is_Active__c=true;
+            insert pm4 ;
+            // insert AY_Organization_GL_Register_Record__c
+        AY_Organization_GL_Register_Record__c rrc= new AY_Organization_GL_Register_Record__c();
+            rrc.Name='tc';
+            rrc.AY_Council_Code_Identifier__c=agl.id;
+            rrc.AY_Council_GL_Item_Code__c='12364';
+            insert rrc;
+            // user enter 
+         Profile p = [SELECT Id,name  FROM Profile WHERE Name='System Administrator']; 
+                    User u = new User(Alias = 'stan4', Email='standarduser456@testorg.com', 
+                        EmailEncodingKey='UTF-8', LastName='Testing456', LanguageLocaleKey='en_US', 
+                        Council_Code__c = 999,LocaleSidKey='en_US', ProfileId = p.Id, 
+                        TimeZoneSidKey='America/Los_Angeles', UserName='mnjbjnjknkb@gmil.com');
+                    insert u ;
+               // insert gl registers 
+     
+                  
+       // Create 2 varaiables for councile 999
+        AcctSeed__Accounting_Variable__c av = new AcctSeed__Accounting_Variable__c();
+            av.AcctSeed__Type__c='GL Account Variable 1';
+            av.AcctSeed__Active__c=true;
+            av.Name = '999';
+            insert av;
+        AcctSeed__Accounting_Variable__c avarb= new AcctSeed__Accounting_Variable__c();
+            avarb.AcctSeed__Type__c='GL Account Variable 2';
+            avarb.AcctSeed__Active__c=true;
+            avarb.name = 'Membership';
+            insert avarb;
+       // Lets create Giving Record  
+             //Insert opportunity
+         RecordType rt =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Membership' limit 1];
+           
+            Opportunity opp=new opportunity();
+            opp.Name='name';
+            opp.StageName='Closed Won';
+            opp.CloseDate=System.today();
+            opp.RecordTypeId = rt.id;
+            opp.Accountid= acc.id;
+            opp.rC_Giving__Giving_Amount__c=98;
+            opp.Ownerid = u.id;
+            insert opp;
+            // insert opprotunity    new 
+        RecordType rtmem =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Transaction' limit 1];
+       
+          Id pricebookId = Test.getStandardPricebookId();
+            Opportunity op = new opportunity();
+            op.Name='name';
+            op.Pricebook2Id= pricebookId ;
+            op.StageName='Closed Won';
+            op.CloseDate=System.today();
+            op.Accountid= acc.id;
+            op.RecordTypeId = rt.id;
+            op.rC_Giving__Parent__c = opp.id;
+            op.rC_Giving__Transaction_Type__c = 'Payment';
+            op.rC_Giving__Payment_Method_Selected__c = pM2.id; 
+            op.Amount=15;
+            op.Ownerid = u.id;
+            op.rC_Giving__Giving_Amount__c=15;
+            insert op;
+         // Create a Refund Transaction
+         Opportunity oprefund = new opportunity();
+            oprefund.Name='name';
+            oprefund.Pricebook2Id= pricebookId ;
+            oprefund.StageName='Closed Won';
+            oprefund.CloseDate=System.today();
+            oprefund.Accountid= acc.id;
+            oprefund.RecordTypeId = rt.id;
+            oprefund.rC_Giving__Parent__c = opp.id;
+            oprefund.rC_Giving__Transaction_Type__c = 'Refund';
+            oprefund.rC_Giving__Payment_Method_Selected__c = pM2.id; 
+            oprefund.Amount=15;
+            oprefund.Ownerid = u.id;
+            oprefund.rC_Giving__Giving_Amount__c=15;
+            insert oprefund;
+               
+         
+       Product2 prd1 = new Product2 (Name='Test_ppp',Description='Test Product Entry 1',productCode = 'ABC', isActive = true);
+            insert prd1;
+            // pricebook entry object
+           
+      RecordType rp =[select id,Name from RecordType where sObjectType='Product2' AND Name='Membership' limit 1];
+            Product2 pro=new product2();
+            pro.RecordTypeId = rp.Id;
+            pro.Name='name';
+            pro.AcctSeed__Unit_Cost__c=22;
+            pro.IsActive=true;
+            pro.productCode = '1o1';
+            pro.rC_Giving__Start_Date__c=system.today();
+            pro.rC_Giving__End_Date__c=system.today();
+            pro.Family='Membership';
+            insert  pro;
+   
+      Test.startTest(); 
+           // staging object
+           // Just an active Record
+           Ay_AS_Staging__c sc=new Ay_AS_Staging__c();
+            sc.AccountiD__c= acc.id;
+            sc.Product__c=pro.id;
+            sc.Unit_Price__c=9;
+            sc.Total_Price__c=56;
+            sc.Type_Of_Call__c='ACTIVE';
+            sc.Council_GL_Account_Register__c='999';
+            sc.Discount__c=1;
+            sc.Parent_Giving__c=op.id;
+            sc.Transaction_1__c = opp.id;
+            sc.Household_Council_Code__c='999';
+            sc.Total_Price__c=15;
+            sc.Item_Start_Date__c=System.today() -5;
+            sc.Transaction_1__c=op.id;
+            sc.Item_Family__c='Membership';
+          
+            sc.Payments__c=15;
+            insert sc ; 
+            Set<id> ids = new Set<id>(); 
+            ids.add(sc.id); 
+           
+           
+          // Payment Record
+         
+    
+         String Query  = 'Select id,name ,AccountiD__c , Deferred_Revenue_GL_Code__c,JE_Date__c,'
+                          + 'AY_Calc_Amount__c, AY_Calc_Start_Date__c,Parent_Giving__c, OpportunityOwner__c,'
+                          + 'Financial_Aid_Code__c, Financial_Aid_Label__c,Council_GL_Account_Register__c,Discount__c,'
+                          + 'Household_Council_Code__c ,Item_Family__c ,Item_Start_Date__c,OpportunityId__c,'
+                          + 'OpportunityLineId__c  ,Ay_Payment_Method__c ,Payments__c,Product__c,Type_Of_Call__c ,'
+                          + 'Unit_Price__c,Total_Price__c,Transaction_1__c , Deferred_Item_Discount_GL__c,'
+                          + 'Deferred_Item_Discount_GL_Code__c, Deferred_Receivable_GL__c, Deferred_Receivable_GL_Code__c,'
+                          + 'Deferred_Revenue_GL__c,Item_Discount_GL__c, Item_Discount_GL_Code__c , Opportunity_Owner_Id__c,'
+                          + 'Receivable_GL__c, receivable_GL_Code__c,NO_CL__c, Revenue_GL__c, Revenue_GL_Code__c from Ay_AS_Staging__c';
+       
+         System.runAs(u) {
+         
+        AyAccountingBatchProcessing oBatch= new AyAccountingBatchProcessing(Query, ids);
+                    database.executeBatch(oBatch,5) ;
+     
+                      }
+         Test.stopTest()   ;          
+         }
+         
+      static testMethod void testCancelTransactions() {
+        // create account object
+      Account acc=new Account ();
+            acc.Name='Name';
+            insert acc;
+            // insert payment method
+       RecordType py=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Gift Certificates' limit 1];
+            rC_Giving__Payment_Method__c pm1 =new rC_Giving__Payment_Method__c();
+            pm1 .rC_Giving__Account__c=acc.id;
+            pm1 .RecordTypeId=py.id;
+            pm1 .rC_Giving__Billing_Country__c='IN';
+            pm1 .rC_Giving__Billing_Postal_Code__c='12345';
+            pm1 .rC_Giving__Is_Active__c=true;
+            insert pm1 ;
+            /// insert payment
+        RecordType pyl=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal - Memberships' limit 1];
+            rC_Giving__Payment_Method__c pm2 =new rC_Giving__Payment_Method__c();
+            pm2.rC_Giving__Account__c=acc.id;
+            pm2.RecordTypeId=pyl.id;
+            pm2.rC_Giving__Billing_Country__c='IN';
+            pm2.rC_Giving__Billing_Postal_Code__c='12345';
+            pm2.rC_Giving__Is_Active__c=true;
+            insert pm2 ;  
+          // insert payment
+        
+       
+            
+       RecordType py2=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal' limit 1];
+            rC_Giving__Payment_Method__c pm =new rC_Giving__Payment_Method__c();
+            pm.rC_Giving__Account__c=acc.id;
+            pm.RecordTypeId=py.id;
+            pm.rC_Giving__Billing_Country__c='IN';
+            pm.rC_Giving__Billing_Postal_Code__c='12345';
+            pm.rC_Giving__Is_Active__c=true;
+            insert pm;
+            //new paymennt method
+      RecordType py1=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Cash/Check' limit 1];
+            rC_Giving__Payment_Method__c pmc =new rC_Giving__Payment_Method__c();
+            pmc.rC_Giving__Account__c=acc.id;
+            pmc.RecordTypeId=py1.id;
+            pmc.rC_Giving__Billing_Country__c='IN';
+            pmc.rC_Giving__Billing_Postal_Code__c='12345';
+            pmc.rC_Giving__Is_Active__c=true;
+            insert pmc; 
+            // new paymet method
+            
+      RecordType py3=[select id,Name from RecordType where sObjectType='rC_Giving__Payment_Method__c' AND Name='Paypal' limit 1];
+            rC_Giving__Payment_Method__c pm4 =new rC_Giving__Payment_Method__c();
+            pm4.rC_Giving__Account__c=acc.id;
+            pm4.RecordTypeId=py3.id;
+            pm4.rC_Giving__Billing_Country__c='IN';
+            pm4.rC_Giving__Billing_Postal_Code__c='12345';
+            pm4.rC_Giving__Is_Active__c=true;
+            insert pm4 ;
+            // user enter 
+         Profile p = [SELECT Id,name  FROM Profile WHERE Name='System Administrator']; 
+                    User u = new User(Alias = 'stan4', Email='standarduser456@testorg.com', 
+                        EmailEncodingKey='UTF-8', LastName='Testing456', LanguageLocaleKey='en_US', 
+                        Council_Code__c = 999,LocaleSidKey='en_US', ProfileId = p.Id, 
+                        TimeZoneSidKey='America/Los_Angeles', UserName='mnjbjnjknkb@gmil.com');
+                    insert u ;
+               // insert gl registers 
+     
+                  
+       // Create 2 varaiables for councile 999
+        AcctSeed__Accounting_Variable__c av = new AcctSeed__Accounting_Variable__c();
+            av.AcctSeed__Type__c='GL Account Variable 1';
+            av.AcctSeed__Active__c=true;
+            av.Name = '999';
+            insert av;
+        AcctSeed__Accounting_Variable__c avarb= new AcctSeed__Accounting_Variable__c();
+            avarb.AcctSeed__Type__c='GL Account Variable 2';
+            avarb.AcctSeed__Active__c=true;
+            avarb.name = 'Membership';
+            insert avarb;
+       // Lets create Giving Record  
+             //Insert opportunity
+           RecordType rt =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Membership' limit 1];
+           
+            RecordType rp =[select id,Name from RecordType where sObjectType='Product2' AND Name='Membership' limit 1];
+           
+            Product2 pro=new product2();
+            pro.RecordTypeId = rp.Id;
+            pro.Name='TestMethod Product';
+            pro.AcctSeed__Unit_Cost__c=22;
+            pro.IsActive=true;
+            pro.productCode = 'TestMethodCode';
+            pro.rC_Giving__Start_Date__c=system.today();
+            pro.rC_Giving__End_Date__c=system.today();
+            pro.Family='Membership';
+            insert  pro;
+            String standardPriceBookId = '';
+            
+            List<PriceBook2> pb2Standard = [select Id from Pricebook2 where isStandard=true];
+            standardPriceBookId = pb2Standard[0].Id;
+            
+            List< PricebookEntry>  pbelist = [Select id from PricebookEntry where isActive = True Limit 1];
+           // PricebookEntry pbe = new PricebookEntry(Pricebook2Id=standardPriceBookId, Product2Id=pro.Id, UnitPrice=99, isActive=true);
+           // insert pbe;
+            id pbeid; 
+            if ( pbelist.isempty() == False){
+              pbeid = pbelist[0].id;
+            }  
+            
+            Opportunity opp=new opportunity();
+            opp.Name='Ayodia Test Method';
+            opp.StageName='Closed Won';
+            opp.CloseDate=System.today();
+            opp.RecordTypeId = rt.id;
+            opp.Accountid= acc.id;
+            opp.rC_Giving__Giving_Amount__c=98;
+            opp.Ownerid = u.id;
+            insert opp;
+             //Insert Opportunity LineItem
+              OpportunityLineItem opps=new OpportunityLineItem();
+                opps.UnitPrice=10;
+                opps.Quantity=2;
+                opps.OpportunityId=opp.id;
+                opps.PriceBookEntryId= pbeid;
+                opps.AY_Item_Status__c='Active';
+                opps.Item_Type__c = 'Membership';
+              //  opps.AY_Transaction_1__c = Tran.id;
+             insert opps;
+            
+            // insert opprotunity    new 
+            RecordType rtmem =[select id,Name from RecordType where sObjectType='opportunity' AND Name='Transaction' limit 1];
+       
+            Opportunity op = new opportunity();
+            op.Name='name';
+           // op.Pricebook2Id= pricebookId ;
+            op.StageName='Closed Won';
+            op.CloseDate=System.today();
+            op.Accountid= acc.id;
+            op.RecordTypeId = rt.id;
+            op.rC_Giving__Parent__c = opp.id;
+            op.rC_Giving__Transaction_Type__c = 'Payment';
+            op.rC_Giving__Payment_Method_Selected__c = pM2.id; 
+            op.Amount=15;
+            op.Ownerid = u.id;
+            op.rC_Giving__Giving_Amount__c=15;
+            insert op;
+         // Create a Refund Transaction
+         Opportunity oprefund = new opportunity();
+            oprefund.Name='name';
+         //   oprefund.Pricebook2Id= pricebookId ;
+            oprefund.StageName='Closed Won';
+            oprefund.CloseDate=System.today();
+            oprefund.Accountid= acc.id;
+            oprefund.RecordTypeId = rt.id;
+            oprefund.rC_Giving__Parent__c = opp.id;
+            oprefund.rC_Giving__Transaction_Type__c = 'Refund';
+            oprefund.rC_Giving__Payment_Method_Selected__c = pM2.id; 
+            oprefund.Amount=15;
+            oprefund.Ownerid = u.id;
+            oprefund.rC_Giving__Giving_Amount__c=15;
+            insert oprefund;
+               
+         
+           
+      
+   Test.startTest(); 
+        // Cancellation 
+           Ay_AS_Staging__c sc3=new Ay_AS_Staging__c();
+            sc3.AccountiD__c= acc.id;
+            sc3.Discount__c=1;
+            sc3.Product__c=pro.id;
+            sc3.Unit_Price__c=9;
+            sc3.Total_Price__c=56;
+            sc3.Type_Of_Call__c='CANCELLED';
+            sc3.Council_GL_Account_Register__c='999';
+           // sc.Discount__c=99;
+            sc3.Parent_Giving__c=op.id;
+            sc3.Transaction_1__c = opp.id;
+            sc3.Household_Council_Code__c='999';
+            sc3.Total_Price__c=15;
+            sc3.Item_Start_Date__c=System.today() -5;
+            sc3.Transaction_1__c=oprefund.id;
+            sc3.Item_Family__c='Membership';
+            sc3.Payments__c=15;
+            insert sc3 ; 
+            Set<id> ids = new Set<id>(); 
+            ids.add(sc3.id); 
+                  
+         
+    
+         String Query  = 'Select id,name ,AccountiD__c , Deferred_Revenue_GL_Code__c,JE_Date__c,'
+                          + 'AY_Calc_Amount__c, AY_Calc_Start_Date__c,Parent_Giving__c, OpportunityOwner__c,'
+                          + 'Financial_Aid_Code__c, Financial_Aid_Label__c,Council_GL_Account_Register__c,Discount__c,'
+                          + 'Household_Council_Code__c ,Item_Family__c ,Item_Start_Date__c,OpportunityId__c,'
+                          + 'OpportunityLineId__c  ,Ay_Payment_Method__c ,Payments__c,Product__c,Type_Of_Call__c ,'
+                          + 'Unit_Price__c,Total_Price__c,Transaction_1__c , Deferred_Item_Discount_GL__c,'
+                          + 'Deferred_Item_Discount_GL_Code__c, Deferred_Receivable_GL__c, Deferred_Receivable_GL_Code__c,'
+                          + 'Deferred_Revenue_GL__c,Item_Discount_GL__c, Item_Discount_GL_Code__c , Opportunity_Owner_Id__c,'
+                          + 'Receivable_GL__c, receivable_GL_Code__c, Revenue_GL__c, NO_CL__c,'
+                          +' Revenue_GL_Code__c from Ay_AS_Staging__c';
+       
+         System.runAs(u) {
+         
+        AyAccountingBatchProcessing oBatch= new AyAccountingBatchProcessing(Query, ids);
+                    database.executeBatch(oBatch,5) ;
+     
+        }
+        
+        // Cakl AyHandler create method
+        
+        AyAccountingHandler ayclass = new AyAccountingHandler(); 
+        ayClass.createAy_AS_Staging ( opps, op.id , 'CASH', 'CASH');
+        ayClass.createAy_AS_Staging ( opps, op.id , 'ACTIVE', 'CASH');
+
+
+         Test.stopTest();
+                      
+         }            
+  }
