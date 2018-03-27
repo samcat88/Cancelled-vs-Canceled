@@ -1,0 +1,883 @@
+/*
+
+Class Name : AyAccountingQandler
+Description : This class is getting invoked from Opportunity Product Trigger to create Accounting Transactions
+Team        : Ayodia 
+
+*/
+
+public class AyAccountingHandler  {
+
+   
+    Private Map<id,Ay_AS_Staging__c> OptyActiveLinesMap= New Map<id,Ay_AS_Staging__c>();
+    private Map<Id,Decimal> asStagCouncilNumberMap = new Map<Id,Decimal>();
+    Private Map<Id,String> asStag_ItemFamilyMap = new Map<Id,String>();
+    Private Map<String,AcctSeed__Billing__c> billingMap= new Map<String,AcctSeed__Billing__c>(); 
+    public List<AcctSeed__Journal_Entry__c > jEList= new List<AcctSeed__Journal_Entry__c >();
+    public Map<String, AcctSeed__Journal_Entry__c > JEMasterMap= new Map<String, AcctSeed__Journal_Entry__c >(); 
+    
+    Private Map<id,AcctSeed__Billing_Line__c> billingLineMap = new Map<id,AcctSeed__Billing_Line__c>();
+    Private Map<id,AcctSeed__Journal_Entry_Line__c> jELineLineMap = new Map<id,AcctSeed__Journal_Entry_Line__c>();
+    Public List<AcctSeed__Journal_Entry_Line__c> jELineLineList = new List<AcctSeed__Journal_Entry_Line__c>();
+    
+    Private List<AcctSeed__Cash_Receipt__c> cashReceiptList = new List<AcctSeed__Cash_Receipt__c >();
+    Private Map<String, id> glCodeMap = new Map<String, id>();
+    Private Map<id, string> glAbilaMap = new Map<id, string>();
+    Private Map<id, id> glHQId = new Map<id, id>();
+    
+   
+    Private Map<String, id> ASVariable1Map  = new Map<String, id>();
+    Private Map<String, id> ASVariable2Map = new Map<String, id>();
+    Private Map<id, AY_Council_GL_Account_Register__c> CouncilRegisterMap = new Map<id, AY_Council_GL_Account_Register__c>();
+    Private  List<Ay_AS_Staging__c> asStagingList = new List<Ay_AS_Staging__c>(); 
+    Private  Map<String,AYGLAbilaMapping__c>  ayGlAbilaMap = new Map<String,AYGLAbilaMapping__c>();
+    
+    // Constructor 
+    public AyAccountingHandler() {
+    
+    
+    }
+    
+   
+    
+     // Public method to create all the AS transactions 
+     public void CreateAsTrsnactions(List<Ay_AS_Staging__c> ayStagingList, Map<String, AYGLAbilaMapping__c> ayGLMappingMap_P, Map< string,AY_Council_GL_Account_Register__c > CouncilGLMAP_P, Map<String, id> ASVariabl1Map_P , Map<String, id> ASVariable2Map_P, Map<String, AyPaymentMethod__c> ayPaymentMethodMap_P){
+      
+       
+        System.debug('-----size Of List---------'+ayStagingList.size()) ; 
+       
+       List<Ay_AS_Staging__c>   ayStagList     = ayStagingList ;
+       Map< string,AY_Council_GL_Account_Register__c> CouncilGLMAP = CouncilGLMAP_P ;
+       Map<String, AYGLAbilaMapping__c> ayGLMappingMap =  ayGLMappingMap_P ;
+         
+       Map<String, id> ASVariabl1Map  = ASVariabl1Map_P ;
+       Map<String, id> ASVariable2Map = ASVariable2Map_P ;
+       Map<String, AyPaymentMethod__c> ayPaymentMethodMap = ayPaymentMethodMap_P ; 
+       
+       
+       // Loop through the call and make Journal entries Header
+       for(Ay_AS_Staging__c ayStaging : ayStagList){
+          System.debug('------------'+ayStaging) ; 
+         String Key1;
+         String Key2;
+         String TranType; 
+         TranType = ayStaging.Type_Of_Call__c; 
+         AYGLAbilaMapping__c ayGlMapping;
+         
+         ID ActVariable1 = ASVariable1Map.get(String.Valueof(ayStaging.Household_Council_Code__c)); 
+         ID ActVariable2 = ASVariable2Map.get(ayStaging.Item_Family__c);
+                  
+         System.debug('------ActVariable2-----------'+ActVariable2);
+         System.debug('------ASVariable2Map-----------'+ASVariable2Map.values());
+         
+         
+
+         Key1 = ayStaging.Item_Family__c;
+         if (ayStaging.AY_Calc_Start_Date__c <> NULL && ayStaging.AY_Calc_Start_Date__c > System.Today() 
+              && ayStaging.Type_Of_Call__c  <> 'REFUND'
+              && ayStaging.Type_Of_Call__c  <> 'WAITLISTED'){
+            Key1 = Key1 + 'Date'; 
+         }
+         
+         Key1 = Key1 +  TranType; 
+         
+         if (ayStaging.Discount__c > 0  
+           && ayStaging.Type_Of_Call__c <> 'REFUND'
+           && ayStaging.Type_Of_Call__c  <> 'WAITLISTED'){
+         
+           Key2 = ayStaging.Item_Family__c; 
+           
+               if (ayStaging.AY_Calc_Start_Date__c <> NULL && ayStaging.AY_Calc_Start_Date__c > System.Today()){
+                Key2 = Key2 + 'Date'; 
+               }           
+               Key2 = Key2 + 'Discount'+TranType;
+               
+               //Code added by Ashutosh on 20/07/2016 : Becasue we have the custom setting name greater than its capacity of text field.
+               if(key2 == 'Council Service FeeDateDiscountACTIVEDEF'){
+                   Key2 = 'Council Service FeeDateDisACTIVEDEF';
+               }
+               if(key2 == 'Council Service FeeDateDiscountACTIVEDEFREV'){
+                   Key2 = 'Council Service FeeDateDisACTIVEDEFREV';
+               }
+               if(key2 == 'Lifetime MembershipDateDiscountACTIVEDEF'){
+                   Key2 = 'Lifetime MembershipDateDisACTIVEDEF';
+               }
+               if(key2 == 'Lifetime MembershipDateDiscountACTIVEDEFREV'){
+                   Key2 = 'Lifetime MembershipDateDisACTIVEDEFREV';
+               }
+               //Above Added code end here.... By: Ashutosh
+         }
+         
+         System.Debug('-----Key1----'+ Key1); 
+         System.Debug('-----ayGLMappingMap----'+ ayGLMappingMap.keySet()); 
+         if ( Key1 <> NULL){
+         
+           if ( ayGLMappingMap.ContainsKey(key1)){
+               ayGlMapping =  ayGLMappingMap.get(Key1) ; 
+               System.Debug('-----ayGlMapping----'+ ayGlMapping); 
+         
+              // Call JE Header 
+              CreateJEHeader(ayGLMapping ,ayStaging, CouncilGLMAP, ayPaymentMethodMap, ActVariable1, ActVariable2 ) ;
+      
+           
+           }
+         
+         }
+         
+         if ( Key2 <> NULL){
+         
+           if ( ayGLMappingMap.ContainsKey(key2)){
+               ayGlMapping =  ayGLMappingMap.get(Key2) ; 
+               CreateJEHeader(ayGLMapping ,ayStaging, CouncilGLMAP, ayPaymentMethodMap, ActVariable1, ActVariable2  ) ;
+           
+           }
+         
+         }
+   }
+   
+   // Its time to Insert The header
+   if (jEList.IsEmpty() == False){
+   try{
+     Upsert jEList Ay_Internal__C; 
+   }
+   catch(Exception e){
+   }
+   }
+   // Call the same routine to enter JE Line Items. 
+          // Loop through the call and make Journal entries Header
+       for(Ay_AS_Staging__c asStaging : ayStagList){
+       
+         String Key1;
+         String Key2;
+         String TranType; 
+         TranType = asStaging.Type_Of_Call__c; 
+         AYGLAbilaMapping__c ayGlMapping;
+         id JeHeaderId; 
+         Id ActVariable1;  
+         ID ActVariable2;
+         String JeHeaderKey;  
+         System.debug('------variable 1 map-----------'+ASVariable1Map);
+         
+         ActVariable1 = ASVariable1Map.get(String.Valueof(asStaging.Council_GL_Account_Register__c)); 
+         
+         System.debug('------ActVariable1-----------'+ActVariable1);
+         
+         ActVariable2 = ASVariable2Map.get(asStaging.Item_Family__c);
+         
+         System.debug('------ActVariable2-----------'+ActVariable2);
+         System.debug('------ActVariableMap-----------'+ASVariable2Map.values());                  
+                       
+         Key1 = asStaging.Item_Family__c;
+         if (asStaging.AY_Calc_Start_Date__c <> NULL  && asStaging.AY_Calc_Start_Date__c > System.Today() 
+           && asStaging.Type_Of_Call__c  <> 'REFUND'
+           && asStaging.Type_Of_Call__c  <> 'WAITLISTED'){
+            Key1 = Key1 + 'Date'; 
+         }
+         
+         If(Key1 <> null && TranType <> null){ 
+             Key1 = Key1 +  TranType;
+         } 
+         
+         if (asStaging.Discount__c > 0  && asStaging.Type_Of_Call__c  <> 'REFUND' && asStaging.Type_Of_Call__c  <> 'WAITLISTED'){
+         
+           Key2 = asStaging.Item_Family__c; 
+           if (asStaging.AY_Calc_Start_Date__c <> NULL && asStaging.AY_Calc_Start_Date__c > System.Today()){
+                Key2 = Key2 + 'Date'; 
+           }
+           Key2 = Key2 + 'Discount'+TranType;
+           
+               //Code added by Ashutosh on 20/07/2016 : Becasue we have the custom setting name greater than its capacity of text field.
+               if(key2 == 'Council Service FeeDateDiscountACTIVEDEF'){
+                   Key2 = 'Council Service FeeDateDisACTIVEDEF';
+               }
+               if(key2 == 'Council Service FeeDateDiscountACTIVEDEFREV'){
+                   Key2 = 'Council Service FeeDateDisACTIVEDEFREV';
+               }
+               if(key2 == 'Lifetime MembershipDateDiscountACTIVEDEF'){
+                   Key2 = 'Lifetime MembershipDateDisACTIVEDEF';
+               }
+               if(key2 == 'Lifetime MembershipDateDiscountACTIVEDEFREV'){
+                   Key2 = 'Lifetime MembershipDateDisACTIVEDEFREV';
+               }
+               //Above Added code end here.... By: Ashutosh
+           
+         }
+         
+         if ( Key1 <> NULL){
+         
+           if ( ayGLMappingMap.ContainsKey(key1)){
+           
+              system.debug('---Vikram---'+ Key1);
+              
+              ayGlMapping =  ayGLMappingMap.get(Key1) ; 
+              
+              // Call JE Line 
+              // Before Inserting the JE line , lets find the header record for this
+              if (ayGLMapping.HQ_ID__c <> NULL ){
+                 JeHeaderKey = ayGLMapping.name + String.Valueof(asStaging.id) + 'HQ'; 
+                 JeHeaderId = JEMasterMap.get(JeHeaderKey).id; 
+                 CreateJEDetail('HQ',JeHeaderId, ActVariable1, ActVariable2,  ayGLMapping ,asStaging, CouncilGLMAP , ayPaymentMethodMap) ; 
+              } 
+              
+                
+                 JeHeaderKey = ayGLMapping.name + String.Valueof(asStaging.id) + 'CL';
+                 if ( JEMasterMap.Containskey(JeHeaderKey) ){
+                  JeHeaderId = JEMasterMap.get(JeHeaderKey).id; 
+                  CreateJEDetail('CL',JeHeaderId, ActVariable1, ActVariable2,  ayGLMapping ,asStaging, CouncilGLMAP , ayPaymentMethodMap) ; 
+                 }
+           }
+         
+         }
+         
+         if ( Key2 <> NULL){
+              if ( ayGLMappingMap.ContainsKey(key2)){
+               ayGlMapping =  ayGLMappingMap.get(Key2) ; 
+              if (ayGLMapping.HQ_ID__c <> NULL ){
+                 JeHeaderKey = ayGLMapping.name + String.Valueof(asStaging.id) + 'HQ'; 
+                
+                 JeHeaderId = JEMasterMap.get(JeHeaderKey).id; 
+               
+                 CreateJEDetail('HQ',JeHeaderId, ActVariable1, ActVariable2,  ayGLMapping ,asStaging, CouncilGLMAP , ayPaymentMethodMap) ; 
+              }               
+                 JeHeaderKey = ayGLMapping.name + String.Valueof(asStaging.id) + 'CL'; 
+                 if ( JEMasterMap.Containskey(JeHeaderKey) ){
+                  JeHeaderId = JEMasterMap.get(JeHeaderKey).id; 
+                  CreateJEDetail('CL',JeHeaderId, ActVariable1, ActVariable2,  ayGLMapping ,asStaging, CouncilGLMAP, ayPaymentMethodMap ) ; 
+                 }
+           }
+         
+         }
+   }
+   
+  
+   If ( jELineLineList.isempty() == False){
+   try{
+       Upsert jELineLineList Ay_Internal__C; 
+   }catch(Exception e){
+   
+   }
+   }
+   
+    // All done, Its time to Post The JEs and Delete the Staging Rows
+   if (jEList.IsEmpty() == False){
+   
+    PostJEs(jEList, ayStagList ); 
+   
+   }
+   
+   
+
+   
+ }   
+  
+     public void CreateJEHeader( AYGLAbilaMapping__c ayGLMapping ,Ay_AS_Staging__c ayStaging, Map< String,AY_Council_GL_Account_Register__c > CouncilGLMAP, Map<String,AyPaymentMethod__c> ayPaymentMethod , id ActVariable1, id ActVariable2 ) {
+     
+      // If HQ then Needs to create entry for HQ as well for CL
+      If ( ayGLMapping.HQ_ID__c <> NULL) {
+      
+               AcctSeed__Journal_Entry__c jE = new AcctSeed__Journal_Entry__c();
+               
+               
+               je.Item_Start_Date__c = ayStaging.Item_Start_Date__c ; 
+               Je.Ownerid  = Label.HQ_Record_Owner ;
+               jE.Name= ayGLMapping.name + String.Valueof(ayStaging.id);
+               // This needs to be updated 
+               jE.AcctSeed__Journal_Date__c = ayStaging.JE_Date__c;               
+               jE.AcctSeed__Status__c = 'Approved';
+               jE.Opportunity__c = ayStaging.Parent_Giving__c;
+               jE.AY_Transaction_Type__c = ActVariable2;
+               jE.Product__c = ayStaging.Product__c;
+               jE.AY_Council_Code__c = ActVariable1;
+               System.debug('------------------------'+ayGLMapping.HQ_ID__c) ;
+                
+               AY_Council_GL_Account_Register__c  ayCouncilGL = CouncilGLMAP.get(ayGLMapping.HQ_ID__c); 
+                
+                System.debug('------------------------'+ayCouncilGL) ;
+                
+               //Added by prateek  
+               If (ayStaging.Type_Of_Call__c == 'CANCEL' || ayStaging.Type_Of_Call__c == 'CANCELLED' || 
+                   ayStaging.Type_Of_Call__c == 'DiscountCANCEL' || ayStaging.Type_Of_Call__c == 'DiscountCANCELLED') {
+                
+                je.Item_Start_Date__c = date.today() ;
+                
+               }
+                
+               If (ayStaging.Type_Of_Call__c == 'CASH' ) {
+               
+                        jE.Ay_Debit_GL__c        = ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).HQ_AS_GL__c;
+                        jE.Abila_Debit_Code__c   =   (String) ayCouncilGL.get(ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).HQ_Abila_Field__c);
+                        jE.Abila_Debit_Name__c   =  ayStaging.Ay_Payment_Method__c;
+                        
+                }  else if (ayStaging.Type_Of_Call__c == 'REFUND'){
+           
+                      if ( ayPaymentMethod.ContainsKey(ayStaging.Ay_Payment_Method__c)){
+                            jE.Ay_Credit_GL__c        = ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).HQ_AS_GL__c;
+                            jE.Abila_Credit_Code__c   =  (String) ayCouncilGL.get(ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).HQ_Abila_Field__c); 
+                            jE.Abila_Credit_Name__c   =  ayStaging.Ay_Payment_Method__c;
+                            // Setting Debit entries too
+                             jE.Ay_Debit_GL__c        = ayGLMapping.HQ_AS_Debit_Field_code__c;
+                           jE.Abila_Debit_Code__c   =   (String) ayCouncilGL.get(ayGLMapping.HQ_Debit_Field__c);
+                           jE.Abila_Debit_Name__c   =  ayGLMapping.HQ_Debit_Field_Label__c;
+                     }   
+                    
+               
+                 } else{
+            
+                    jE.Ay_Debit_GL__c        = ayGLMapping.HQ_AS_Debit_Field_code__c;
+                    If(ayCouncilGL <> null){
+                        jE.Abila_Debit_Code__c   =   (String) ayCouncilGL.get(ayGLMapping.HQ_Debit_Field__c);
+                    }
+                    jE.Abila_Debit_Name__c   =  ayGLMapping.HQ_Debit_Field_Label__c;
+             
+           }
+             
+             if (ayStaging.Type_Of_Call__c <> 'REFUND'){       
+                   
+                   jE.Ay_Credit_GL__c       = ayGLMapping.HQ_AS_Credit_Field_Code__c;
+                   If(ayCouncilGL <> null){
+                       system.debug('error --> '+ ayGLMapping.HQ_Credit_Field__c);
+                       
+                       jE.Abila_Credit_Code__c  =  (String) ayCouncilGL.get(ayGLMapping.HQ_Credit_Field__c);
+                   }
+                   jE.Abila_Credit_Name__c  =  ayGLMapping.HQ_Credit_Field_Label__c;
+              }      
+                   Je.Ay_Internal__c =ayGLMapping.name + String.Valueof(ayStaging.id) + 'HQ' ;
+                   jEList.add(je);
+                   JEMasterMap.put(je.Ay_Internal__c,je);  
+                                 
+       } 
+       
+       if ( ayStaging.No_CL__c == False){ 
+        // Creating second entry for CL
+           AcctSeed__Journal_Entry__c jEcl = new AcctSeed__Journal_Entry__c();
+           jEcl.Ownerid  = ayStaging.OpportunityOwner__c != null ? ayStaging.OpportunityOwner__c : UserInfo.getuserid() ; 
+           jEcl.Name= ayGLMapping.name + String.Valueof(ayStaging.id);
+           jecl.Item_Start_Date__c = ayStaging.Item_Start_Date__c ; 
+           if((ayGLMapping.name.contains('CANCEL')) || (ayGLMapping.name == 'SHORT PAID')) {           
+               jEcl.AcctSeed__Journal_Date__c = system.today();
+           }else{
+               jEcl.AcctSeed__Journal_Date__c = ayStaging.JE_Date__c;                         
+           }
+           jEcl.AcctSeed__Status__c = 'Approved';
+           jEcl.Opportunity__c = ayStaging.Parent_Giving__c;
+           jEcl.AY_Transaction_Type__c = ActVariable2; 
+           jEcl.Product__c = ayStaging.Product__c;
+           jEcl.AY_Council_Code__c = ActVariable1; 
+           System.debug('--------------council GL Register--------------'+ayStaging.Council_GL_Account_Register__c);
+           System.debug('---------------council GL Map---------'+CouncilGLMAP) ;
+           AY_Council_GL_Account_Register__c ayCouncilGL ;
+           if(CouncilGLMAP.containsKey(ayStaging.Council_GL_Account_Register__c)){
+                ayCouncilGL = CouncilGLMAP.get(ayStaging.Council_GL_Account_Register__c);
+           }
+           system.debug('----Vick -CL Council ---'+ ayCouncilGL);
+           
+           If(ayStaging.Type_Of_Call__c == 'CASH' ) {
+               
+               if ( ayPaymentMethod.ContainsKey(ayStaging.Ay_Payment_Method__c)){
+               
+                   if  (ayStaging.Ay_Payment_Method__c == 'Financial_Aid' || ayStaging.Ay_Payment_Method__c == 'Other' ){
+                        jEcl.Ay_Debit_GL__c        =   ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_AS_GL__c;
+                        jEcl.Abila_Debit_Code__c   =   ayStaging.Financial_Aid_Code__c; 
+                        jEcl.Abila_Debit_Name__c   =   ayStaging.Financial_Aid_Label__c; 
+                   } else{
+                   
+                        jEcl.Ay_Debit_GL__c        = ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_AS_GL__c;
+                        if(ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_Abila_Field__c <> NULL){
+                            jEcl.Abila_Debit_Code__c   =   (String) ayCouncilGL.get(ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_Abila_Field__c);
+                        }
+                        jEcl.Abila_Debit_Name__c   =  ayStaging.Ay_Payment_Method__c;    
+                   
+                   }     
+               }
+               
+      
+           
+              } else if (ayStaging.Type_Of_Call__c == 'REFUND'){
+              //    system.debug('--Debug 1--' + ayGLMapping.CL_debit_Field__c);
+              //    system.debug('--Debug 3--' + (String) ayStaging.get(ayGLMapping.CL_Debit_Field__c));
+
+           
+                      if ( ayPaymentMethod.ContainsKey(ayStaging.Ay_Payment_Method__c)){
+                       if ( ayStaging.item_family__c <>'Event' && ayStaging.item_family__c <> 'Merchandise' ){ 
+                           
+                            jEcl.Ay_Debit_GL__c        =   ayGLMapping.CL_AS_debit_GL_Code__c;
+                            if(ayCouncilGL.get(ayGLMapping.CL_debit_Field__c) <> NULL){
+                                jEcl.Abila_Debit_Code__c   =   (String) ayCouncilGL.get(ayGLMapping.CL_debit_Field__c); 
+                            }
+                            jEcl.Abila_Debit_Name__c   =   ayGLMapping.CL_Debit_Field_Label__c;
+                      } else {
+                      
+                            jEcl.Ay_Debit_GL__c        =   ayGLMapping.CL_AS_debit_GL_Code__c;
+                            jEcl.Abila_Debit_Code__c    = (String) ayStaging.get(ayGLMapping.CL_Debit_Field__c);
+                            jEcl.Abila_Debit_Name__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field_Label__c);
+                      }
+                           
+                       
+                     if  (ayStaging.Ay_Payment_Method__c == 'Financial_Aid'  || ayStaging.Ay_Payment_Method__c == 'Other'){
+                            jEcl.Ay_Credit_GL__c        =  ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_AS_GL__c;
+                            jEcl.Abila_Credit_Code__c   =  ayStaging.Financial_Aid_Code__c; 
+                            jEcl.Abila_Credit_Name__c   =  ayStaging.Financial_Aid_Label__c;
+                      } else {
+                      
+                            jEcl.Ay_Credit_GL__c        = ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_AS_GL__c;
+                            if((ayPaymentMethod.containskey(ayStaging.Ay_Payment_Method__c)) && (ayCouncilGL != NULL))
+                            jEcl.Abila_Credit_Code__c   =  (String) ayCouncilGL.get(ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_Abila_Field__c); 
+                            jEcl.Abila_Credit_Name__c   =  ayStaging.Ay_Payment_Method__c;
+                      
+                      }      
+                     }   
+                    
+               
+                }else{
+                          system.debug('--Debug 2--' + ayGLMapping.CL_debit_Field__c);
+                          system.debug('--Debug 4--' + ayGLMapping.name);
+            
+                      jEcl.Ay_Debit_GL__c         = ayGLMapping.CL_AS_Debit_GL_Code__c;
+                      if ( ayStaging.item_family__c <>'Event' &&  ayStaging.item_family__c <> 'Merchandise' ){  // 
+                          If(ayCouncilGL <> null){
+                            jEcl.Abila_Debit_Code__c   =   (String) ayCouncilGL.get(ayGLMapping.CL_Debit_Field__c);
+                          } 
+                            jEcl.Abila_Debit_Name__c   =   ayGLMapping.CL_Debit_Field_Label__c; 
+                        } else{
+                            /* Code added and commented out by Prateek Maan (prateek.maan@ayodia.com) */                             
+                            If((ayGLMapping.name == 'EventDateDiscountACTIVE') || (ayGLMapping.name  == 'EventDateDiscountACTIVEDEFREV')){
+                                jEcl.Abila_Debit_Code__c    = (String) ayCouncilGL.get(ayGLMapping.CL_Debit_Field__c);
+                                jEcl.Abila_Debit_Name__c    =  ayGLMapping.CL_Debit_Field_Label__c;                                                        
+                            }
+                            /*else if(ayGLMapping.name  == 'EventDateDiscountACTIVEDEFREV'){                            
+                               // jEcl.Abila_Debit_Code__c    = (String) ayCouncilGL.get(ayGLMapping.CL_Debit_Field__c);
+                               // jEcl.Abila_Debit_Name__c    = ayGLMapping.CL_Debit_Field_Label__c;
+                            //}
+                            else if(ayGLMapping.name  == 'EventDateCANCEL'){
+                                jEcl.Abila_Debit_Code__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field__c);
+                                jEcl.Abila_Debit_Name__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field_Label__c);
+                            }else if(ayGLMapping.name  == 'EventDateDiscountCANCEL'){
+                                jEcl.Abila_Debit_Code__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field__c);
+                                jEcl.Abila_Debit_Name__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field_Label__c);
+                            }*/
+                            else {
+                                jEcl.Abila_Debit_Code__c    = (String) ayStaging.get(ayGLMapping.CL_Debit_Field__c);
+                                jEcl.Abila_Debit_Name__c    = (String) ayStaging.get(ayGLMapping.CL_Debit_Field_Label__c);
+                            }
+                            
+                            
+                            
+                            /***********************PRATEEK ENDS HERE*******************/
+                       }    
+               }
+                
+               if (ayStaging.Type_Of_Call__c <> 'REFUND'){
+               
+                jEcl.Ay_Credit_GL__c        = ayGLMapping.CL_AS_Credit_GL_Code__c;
+                if ( ayStaging.item_family__c <> 'Event' && ayStaging.item_family__c <> 'Merchandise' ){ 
+                If(ayCouncilGL <> null){
+                   jEcl.Abila_Credit_Code__c   =  (String) ayCouncilGL.get(ayGLMapping.CL_Credit_Field__c); 
+                }
+                   jEcl.Abila_Credit_Name__c   =  ayGLMapping.CL_Credit_Field_Label__c;
+                 } else{
+                         /* Code added and commented out by Prateek Maan (prateek.maan@ayodia.com) */ 
+                            If((ayGLMapping.name == 'EventDateDiscountACTIVEDEF') || (ayGLMapping.name  == 'EventDateDiscountCANCEL')){
+                                jEcl.Abila_Credit_Code__c   = (String) ayCouncilGL.get(ayGLMapping.CL_Credit_Field__c);
+                                jEcl.Abila_Credit_Name__c   = ayGLMapping.CL_Credit_Field_Label__c;
+                            }
+                            /*else If(ayGLMapping.name == 'EventDateDiscountACTIVEDEFREV'){ 
+                                jEcl.Abila_Credit_Code__c   = (String) ayStaging.get(ayGLMapping.CL_Credit_Field__c);
+                                jEcl.Abila_Credit_Name__c   = (String) ayStaging.get(ayGLMapping.CL_Credit_Field_Label__c);
+                            }else if(ayGLMapping.name  == 'EventDateCANCEL'){
+                                jEcl.Abila_Credit_Code__c   =  (String) ayStaging.get(ayGLMapping.CL_Credit_Field__c);
+                                jEcl.Abila_Credit_Name__c   =  (String) ayStaging.get(ayGLMapping.CL_Credit_Field_Label__c);
+                            }*/
+                            else{
+                                jEcl.Abila_Credit_Code__c   = (String) ayStaging.get(ayGLMapping.CL_Credit_Field__c);
+                                jEcl.Abila_Credit_Name__c   = (String) ayStaging.get(ayGLMapping.CL_Credit_Field_Label__c);
+                            
+                            }
+                            
+                 
+                 //    jEcl.Abila_Credit_Code__c   =  (String) ayStaging.get(ayGLMapping.CL_Credit_Field__c); 
+                   //  jEcl.Abila_Credit_Name__c   =  (String) ayStaging.get(ayGLMapping.CL_Credit_Field_Label__c);
+                               /***********************PRATEEK ENDS HERE*******************/
+
+                 }    
+              }
+               jEcl.Ay_Internal__c =ayGLMapping.name + String.Valueof(ayStaging.id) + 'CL' ;
+               
+           jEList.add(jEcl);
+           JEMasterMap.put(jEcl.Ay_Internal__c,jEcl);  
+      
+         }                           
+                        
+     
+     }
+     public void CreateJEDetail(String type,id jEntryId, id ActVariable1, id ActVariable2,  AYGLAbilaMapping__c ayGLMapping ,Ay_AS_Staging__c ayStaging, Map< String,AY_Council_GL_Account_Register__c > CouncilGLMAP, Map<String,AyPaymentMethod__c> ayPaymentMethod ) {
+     
+       Decimal Amount ;
+       AcctSeed__Journal_Entry_Line__c jELine = new AcctSeed__Journal_Entry_Line__c();
+       AcctSeed__Journal_Entry_Line__c jELinecr = new AcctSeed__Journal_Entry_Line__c(); 
+       String jeName ='';
+       If(jEntryId <> null){
+           jeName = [Select name from AcctSeed__Journal_Entry__c where id =: jEntryId].name;
+       }
+       
+       if((ayStaging.Discount__c > 0) && ((jeName.startsWith('EventDateDiscount')) || (jeName.startsWith('EventDiscount')) || 
+               (jeName.startsWith('Council Service FeeDateDis')) || (jeName.startsWith('Council Service FeeDiscount')) || 
+               (jeName.startsWith('Lifetime MembershipDateDis')) || (jeName.startsWith('Lifetime MembershipDiscount')) ||
+               (jeName.startsWith('MembershipDateDiscount')) || (jeName.startsWith('MembershipDiscount')) || 
+               (jeName.startsWith('MerchandiseDiscount')) )){
+           
+               Amount = ayStaging.Discount__c;    
+       } else{
+         Amount = ayStaging.AY_Calc_Amount__c;
+       }
+       
+       If (type == 'HQ'){
+           // Create the Debit Entry
+            AY_Council_GL_Account_Register__c  ayCouncilGL = CouncilGLMAP.get(ayGLMapping.HQ_ID__c); 
+           jELine.AcctSeed__Account__c = ayStaging.AccountiD__c ;
+           jELine.AcctSeed__Journal_Entry__c = jEntryId ;
+          
+           jELine.AcctSeed__Debit__c = Amount;
+           jELine.AcctSeed__GL_Account_Variable_1__c = ActVariable1;
+           jELine.AcctSeed__GL_Account_Variable_2__c = ActVariable2;
+           jELine.AcctSeed__Product__c = ayStaging.Product__c;
+           jELine.Ay_Internal__c =ayGLMapping.name + String.Valueof(ayStaging.id) + 'HQDR' ;
+
+          
+           
+           If (ayStaging.Type_Of_Call__c == 'CASH' ){
+           
+              if ( ayPaymentMethod.ContainsKey(ayStaging.Ay_Payment_Method__c)){
+                // if (ayStaging.Type_Of_Call__c == 'REFUND'){
+                   
+                //        jELine.AcctSeed__GL_Account__c        =   ayGLMapping.HQ_AS_Debit_Field_Code__c;
+                //        jELine.Abila_Debit_Code__c            =   (String) ayCouncilGL.get(ayGLMapping.HQ_debit_Field__c); 
+                //        jELine.Abila_Debit_Name__c            =   ayGLMapping.HQ_Debit_Field_Label__c;
+                     
+                      
+               //} else{
+                        jELine.AcctSeed__GL_Account__c        = ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).HQ_AS_GL__c;
+                        jELine.Abila_Debit_Code__c    =   (String) ayCouncilGL.get(ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).HQ_Abila_Field__c);
+                        jELine.Abila_Debit_Name__c   =  ayStaging.Ay_Payment_Method__c;
+                    
+               //    } 
+              }
+               
+            } else{
+            
+                    jELine.AcctSeed__GL_Account__c  = ayGLMapping.HQ_AS_Debit_Field_code__c ; 
+                    If(ayCouncilGL <> null){
+                        jELine.Abila_Debit_Code__c  =  (String) ayCouncilGL.get(ayGLMapping.HQ_Debit_Field__c); 
+                    }
+                    jELine.Abila_Debit_Name__c  =  ayGLMapping.HQ_Debit_Field_Label__c;
+            }
+            
+            if((jELine.AcctSeed__GL_Account__c!=null)&&(jELine.AcctSeed__Debit__c != null)){
+                  jELineLineList.add(jELine);     
+              }        
+           // Create the Credit Entry 
+           
+           jELinecr.AcctSeed__Account__c = ayStaging.AccountiD__c ;
+           jELinecr.AcctSeed__Journal_Entry__c = jEntryId ;
+           jELinecr.AcctSeed__Credit__c = Amount;
+           jELinecr.AcctSeed__GL_Account_Variable_1__c = ActVariable1;
+           jELinecr.AcctSeed__GL_Account_Variable_2__c = ActVariable2;
+           jELinecr.AcctSeed__Product__c = ayStaging.Product__c;
+//           jELinecr.Council_GL_Account_Register__c = ayStaging.Council_GL_Account_Register__c;
+           jELinecr.Ay_Internal__c =ayGLMapping.name + String.Valueof(ayStaging.id) + 'HQCR' ;
+           
+           if (ayStaging.Type_Of_Call__c == 'REFUND'){
+               system.debug('-----Enter first-------');
+               system.debug('----Ashu-------'+ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).HQ_AS_GL__c);
+
+               jELinecr.AcctSeed__GL_Account__c        = ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).HQ_AS_GL__c;
+               system.debug('-----Ashutosh----'+jELinecr.AcctSeed__GL_Account__c);
+               
+               If(ayCouncilGL <> null){
+                   jELinecr.Abila_Credit_Code__c   =  (String) ayCouncilGL.get(ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).HQ_Abila_Field__c); 
+                   system.debug('--------Abila Credit Code-----'+jELinecr.Abila_Credit_Code__c);
+               }
+               jELinecr.Abila_Credit_Name__c   =  ayStaging.Ay_Payment_Method__c;
+                      
+                             
+          
+           } else {
+           
+               jELinecr.AcctSeed__GL_Account__c  = ayGLMapping.HQ_AS_Credit_Field_Code__c ; 
+               If(ayCouncilGL <> null){
+                   jELinecr.Abila_Debit_Code__c  =  (String) ayCouncilGL.get(ayGLMapping.HQ_Credit_Field__c); 
+               }
+               jELinecr.Abila_Debit_Name__c  =  ayGLMapping.HQ_Credit_Field_Label__c;
+          }     
+           
+           if((jELinecr.AcctSeed__GL_Account__c!=null)&&(jELinecr.AcctSeed__Credit__c != null)){
+                  jELineLineList.add(jELinecr);     
+              } 
+               
+               
+        }else{
+               
+             // Create the Debit Entry
+           
+            AY_Council_GL_Account_Register__c  ayCouncilGL = CouncilGLMAP.get(ayStaging.Council_GL_Account_Register__c); 
+           jELine.AcctSeed__Account__c = ayStaging.AccountiD__c ;
+           jELine.AcctSeed__Journal_Entry__c = jEntryId ;
+           jELine.AcctSeed__Debit__c = Amount;
+           jELine.AcctSeed__GL_Account_Variable_1__c = ActVariable1;
+           jELine.AcctSeed__GL_Account_Variable_2__c = ActVariable2;
+           jELine.AcctSeed__Product__c = ayStaging.Product__c;
+           jELine.Ay_Internal__c =ayGLMapping.name + String.Valueof(ayStaging.id) + 'CLDR' ;
+          // jELine.Council_GL_Account_Register__c = ayStaging.Council_GL_Account_Register__c;
+          system.debug('pass'); 
+           If (ayStaging.Type_Of_Call__c == 'CASH' ){
+               if ( ayPaymentMethod.ContainsKey(ayStaging.Ay_Payment_Method__c)){
+                   if  (ayStaging.Ay_Payment_Method__c == 'Financial_Aid' || ayStaging.Ay_Payment_Method__c == 'Other'  ){
+                        jELine.AcctSeed__GL_Account__c       =   ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_AS_GL__c;
+                        jELine.Abila_Debit_Code__c   =   ayStaging.Financial_Aid_Code__c; 
+                        jELine.Abila_Debit_Name__c   =   ayStaging.Financial_Aid_Label__c; 
+                   } else{
+                    jELine.AcctSeed__GL_Account__c        = ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_AS_GL__c;
+                    If(ayCouncilGL <> null){
+                        jELine.Abila_Debit_Code__c  =   (String) ayCouncilGL.get(ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_Abila_Field__c);
+                    }                   
+                    jELine.Abila_Debit_Name__c   =  ayStaging.Ay_Payment_Method__c;
+                  }
+                }
+            }else if (ayStaging.Type_Of_Call__c == 'REFUND'){
+            
+                 if ( ayStaging.item_family__c <>'Event' && ayStaging.item_family__c <> 'Merchandise' ){ 
+                   
+                   
+                        jELine.AcctSeed__GL_Account__c        =   ayGLMapping.CL_AS_debit_GL_Code__c;
+                        If(ayCouncilGL <> null){
+                            jELine.Abila_Debit_Code__c            =   (String) ayCouncilGL.get(ayGLMapping.CL_debit_Field__c); 
+                        }
+                        jELine.Abila_Debit_Name__c            =   ayGLMapping.CL_Debit_Field_Label__c;
+                 } else {
+                 
+                        jELine.AcctSeed__GL_Account__c        =   ayGLMapping.CL_AS_debit_GL_Code__c;
+                        jELine.Abila_Debit_Code__c    = (String) ayStaging.get(ayGLMapping.CL_Debit_Field__c);
+                        jELine.Abila_Debit_Name__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field_Label__c);
+                 
+                 }     
+                      
+           } 
+            else{
+            
+                   jELine.AcctSeed__GL_Account__c  = ayGLMapping.CL_AS_Debit_GL_Code__c ;
+                   if ( ayStaging.item_family__c <>'Event' && ayStaging.item_family__c <> 'Merchandise' ){ 
+                   If(ayCouncilGL <> null){
+                        jELine.Abila_Debit_Code__c   =   (String) ayCouncilGL.get(ayGLMapping.CL_Credit_Field__c);
+                    }
+                        jELine.Abila_Debit_Name__c   =   ayGLMapping.CL_Debit_Field_Label__c;
+                    } else{ 
+                    /* Code added by Prateek Maan (prateek.maan@ayodia.com)*/ 
+                                
+                        system.debug('pass2');
+                        If((ayGLMapping.name == 'EventDateDiscountACTIVE') || (ayGLMapping.name == 'EventDateDiscountACTIVEDEFREV')){
+                                jELine.Abila_Debit_Code__c    = (String) ayCouncilGL.get(ayGLMapping.CL_Debit_Field__c);
+                                jELine.Abila_Debit_Name__c    =  ayGLMapping.CL_Debit_Field_Label__c;
+                            }
+                            /*else if(ayGLMapping.name == 'EventDateDiscountACTIVEDEFREV'){                            
+                                jELine.Abila_Debit_Code__c    = (String) ayCouncilGL.get(ayGLMapping.CL_Debit_Field__c);
+                                jELine.Abila_Debit_Name__c    = ayGLMapping.CL_Debit_Field_Label__c;
+                            }else if(ayGLMapping.name  == 'EventDateCANCEL'){
+                                jELine.Abila_Debit_Code__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field__c);
+                                jELine.Abila_Debit_Name__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field_Label__c);
+                            }else if(ayGLMapping.name  == 'EventDateDiscountCANCEL'){
+                                jELine.Abila_Debit_Code__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field__c);
+                                jELine.Abila_Debit_Name__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field_Label__c);
+                            } */
+                            else{
+                                jELine.Abila_Debit_Code__c    = (String) ayStaging.get(ayGLMapping.CL_Debit_Field__c);
+                                jELine.Abila_Debit_Name__c    = (String) ayStaging.get(ayGLMapping.CL_Debit_Field_Label__c);
+                            
+                            }
+                            /* Commented by Prateek Maan (prateek.maan@ayodia.com)
+                        jELine.Abila_Debit_Code__c    = (String) ayStaging.get(ayGLMapping.CL_Debit_Field__c);
+                        jELine.Abila_Debit_Name__c    =  (String) ayStaging.get(ayGLMapping.CL_Debit_Field_Label__c);
+                        
+                     /********************PRATEEK ENDS HERE*********************/
+                   }    
+            }     
+           
+            if((jELine.AcctSeed__GL_Account__c!=null)&&(jELine.AcctSeed__Debit__c != null)){
+                  jELineLineList.add(jELine);     
+              }   
+               
+          // Create the Credit Entry 
+           
+           
+           jELinecr.AcctSeed__Account__c = ayStaging.AccountiD__c ;
+           jELinecr.AcctSeed__Journal_Entry__c = jEntryId ;
+           
+           jELinecr.AcctSeed__Credit__c = Amount;
+           jELinecr.AcctSeed__GL_Account_Variable_1__c = ActVariable1;
+           jELinecr.AcctSeed__GL_Account_Variable_2__c = ActVariable2;
+           jELinecr.Ay_Internal__c =ayGLMapping.name + String.Valueof(ayStaging.id) + 'CLCR' ;
+           jELinecr.AcctSeed__Product__c = ayStaging.Product__c;
+         
+    //   
+           if (ayStaging.Type_Of_Call__c == 'REFUND'){
+             
+                if(ayPaymentMethod.containsKey(ayStaging.Ay_Payment_Method__c)){  
+                  if  (ayStaging.Ay_Payment_Method__c == 'Financial_Aid'  || ayStaging.Ay_Payment_Method__c == 'Other'){
+                       
+                            jELinecr.AcctSeed__GL_Account__c       =  ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_AS_GL__c;
+                            jELinecr.Abila_Credit_Code__c  =  ayStaging.Financial_Aid_Code__c; 
+                            jELinecr.Abila_Credit_Name__c  =  ayStaging.Financial_Aid_Label__c;
+                      } else {
+                              system.debug('-------------Enter in else ------');
+                            jELinecr.AcctSeed__GL_Account__c        = ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_AS_GL__c;
+                            If(ayCouncilGL <> null){
+                                jELinecr.Abila_Credit_Code__c   =  (String) ayCouncilGL.get(ayPaymentMethod.get(ayStaging.Ay_Payment_Method__c).CL_Abila_Field__c); 
+                                system.debug('------prateek Test------'+jELinecr.Abila_Credit_Code__c);
+                            }
+                            jELinecr.Abila_Credit_Name__c   =  ayStaging.Ay_Payment_Method__c;
+                      
+                    }           
+              }
+           } else {
+           
+           jELinecr.AcctSeed__GL_Account__c  = ayGLMapping.CL_AS_Credit_GL_Code__c ; 
+           if ( ayStaging.item_family__c <> 'Event' && ayStaging.item_family__c <> 'Merchandise' ){ 
+           If(ayCouncilGL <> null){
+               jELinecr.Abila_Credit_Code__c   =  (String) ayCouncilGL.get(ayGLMapping.CL_Credit_Field__c); 
+           }
+               jELinecr.Abila_Credit_Name__c   =  ayGLMapping.CL_Credit_Field_Label__c;
+             } else{
+                 /* Code added and commented out by Prateek Maan (prateek.maan@ayodia.com) */ 
+                    If((ayGLMapping.name == 'EventDateDiscountACTIVEDEF') || (ayGLMapping.name  == 'EventDateDiscountCANCEL')){
+                        jELinecr.Abila_Credit_Code__c   = (String) ayCouncilGL.get(ayGLMapping.CL_Credit_Field__c);
+                        jELinecr.Abila_Credit_Name__c   = ayGLMapping.CL_Credit_Field_Label__c;
+                    }
+                    /*else If(ayGLMapping.name == 'EventDateDiscountACTIVEDEFREV'){ 
+                        jELinecr.Abila_Credit_Code__c   = (String) ayStaging.get(ayGLMapping.CL_Credit_Field__c);
+                        jELinecr.Abila_Credit_Name__c   = (String) ayStaging.get(ayGLMapping.CL_Credit_Field_Label__c);
+                    }else if(ayGLMapping.name  == 'EventDateCANCEL'){
+                        jELinecr.Abila_Credit_Code__c   =  (String) ayStaging.get(ayGLMapping.CL_Credit_Field__c);
+                        jELinecr.Abila_Credit_Name__c   =  (String) ayStaging.get(ayGLMapping.CL_Credit_Field_Label__c);
+                    }else if(ayGLMapping.name  == 'EventDateDiscountCANCEL'){
+                        jELinecr.Abila_Credit_Code__c   =  (String) ayCouncilGL.get(ayGLMapping.CL_Credit_Field__c);
+                        jELinecr.Abila_Credit_Name__c   =  ayGLMapping.CL_Credit_Field_Label__c; 
+                    }*/
+                    else{
+                        jELinecr.Abila_Credit_Code__c   = (String) ayStaging.get(ayGLMapping.CL_Credit_Field__c);
+                        jELinecr.Abila_Credit_Name__c   = (String) ayStaging.get(ayGLMapping.CL_Credit_Field_Label__c);
+                    
+                    }
+               //  jELinecr.Abila_Credit_Code__c   =  (String) ayStaging.get(ayGLMapping.CL_Credit_Field__c); 
+              //   jELinecr.Abila_Credit_Name__c   =  (String) ayStaging.get(ayGLMapping.CL_Credit_Field_Label__c);
+                     /***********************PRATEEK ENDS HERE*******************/
+
+             } 
+         }        
+           if((jELinecr.AcctSeed__GL_Account__c!=null)&&(jELinecr.AcctSeed__Credit__c != null)){
+                  jELineLineList.add(jELinecr);     
+              } 
+               
+        }
+     
+       
+     }
+     
+     
+     
+      
+      // Method To Insert data from Opplineitem to Ay AS Staging
+      
+      public void createAy_AS_Staging( OpportunityLineItem  oLineItem, ID TransctionID, String Type, String Transcode){
+          system.debug('Type Check-->' + type);
+           Ay_AS_Staging__c asStage = new Ay_AS_Staging__c() ;
+          // asStage.AccountiD__c= oppLineItem.Opportunity.AccountId ;
+           asStage.Household_Council_Code__c = String.valueOF(oLineItem.Household_Council_Code__c) ;
+           asStage.Discount__c          = oLineItem.NS_Discount_Amount__c;    
+           asStage.Item_Family__c       = oLineItem.AY_Item_Family__c ; 
+           asStage.OpportunityId__c     = oLineItem.OpportunityId ;
+           asStage.Parent_Giving__c     = oLineItem.OpportunityId;
+           asStage.Product__c           = oLineItem.Product2ID ;
+           if(Type == 'WAITLISTED' || Type == 'WAITLISTEDREV' || Type == 'SHORT PAID' || Type == 'SHORT PAIDREV'){
+               asStage.Total_Price__c       = oLineItem.AY_Payments__c; 
+           }Else{
+               asStage.Total_Price__c       = oLineItem.Sub_Total__c; 
+           }
+           asStage.Item_Start_Date__c   = oLineItem.AY_Event_Start_Date__c; 
+
+           
+        //   asStage.Opportunity_Owner_Id__c = oppLineItem.Opportunity.ownerid ; 
+           
+           
+              
+          
+           asStage.Council_GL_Account_Register__c = String.valueOF(oLineItem.Household_Council_Code__c) ; 
+           if(Type <>'CASH'){
+                  asStage.Item_Start_Date__c   = oLineItem.AY_Event_Start_Date__c ;
+                  asStage.OpportunityLineId__c = oLineItem.Id; 
+                  asStage.Type_Of_Call__c   = Type;
+                  asStage.Transaction_1__c     = TransctionID ; // Added by prateek
+                  asStage.Unit_Price__c        = oLineItem.UnitPrice != null ? oLineItem.UnitPrice.ABS():null ;
+            } 
+           if(Type =='CASH'){
+                    asStage.OpportunityLineId__c = oLineItem.Id;
+                    asStage.Type_Of_Call__c      = Transcode;
+                    asStage.Transaction_1__c     = TransctionID ;
+                    asStage.Unit_Price__c        = oLineItem.AY_Payments__c != null ? oLineItem.AY_Payments__c.ABS():null ;
+              }
+                     
+            If (TransctionID  <> NULL) {
+                         asStage.TransactionId__c = String.Valueof(oLineItem.id) + asStage.Type_Of_Call__c + String.Valueof(TransctionID);
+            } else{
+                          asStage.TransactionId__c = String.Valueof(oLineItem.id) + asStage.Type_Of_Call__c;
+            }    
+                     
+                     
+             system.debug('-----Vikram---'+ asStage);
+             system.debug('-----Vikram---'+asStagingList); 
+             asStagingList.add(asStage);  
+             
+        }
+        
+        public void Set_AS_Staging( ){
+        
+          If (!asStagingList.IsEmpty() ){
+          
+             system.debug('-------TransctionID---'+ asStagingList);
+             try{
+             Upsert asStagingList TransactionId__c;
+             }
+             catch(Exception e){
+             }
+             //insert asStagingList;
+          }
+        
+       }
+       
+        public void PostJEs( List<AcctSeed__Journal_Entry__c> JeList, List< Ay_AS_Staging__c > AyStagingList){
+        
+        Boolean IsSuccess = True; 
+          // Call the post JE service
+        AcctSeed.PostResult[] postResults = AcctSeed.JournalEntryPostService.postJournalEntries(JeList);
+      
+        // Loop through post results
+        for (AcctSeed.PostResult theResult : postResults) {
+            if (theResult.isSuccess) {
+                System.debug('Successfully posted JE: ' + theResult.id);
+             } else {
+                    isSuccess = False; 
+                    System.debug('Error posting billing ' + theResult.id);
+                    for (AcctSeed.PostResult.PostErrorResult errorResult: theResult.errors) {
+                        System.debug('Error status code ' + errorResult.statusCode);
+                        System.debug('Error message ' + errorResult.message);
+                }
+               
+            }
+        }
+        
+        If ( IsSuccess == TRUE && AyStagingList.IsEmpty() == False ) {
+           Delete  AyStagingList; 
+        }
+      
+          
+       
+       }
+  
+       }
